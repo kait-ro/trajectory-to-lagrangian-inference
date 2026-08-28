@@ -1,4 +1,3 @@
-
 import sympy as sp
 from generation.constraints import (
     DegenerateLagrangianResult,
@@ -9,22 +8,6 @@ from generation.ostrogradski import TIME, lagrangianOrder, timeDerivative
 
 
 class NonUniqueTopDerivativeError(ValueError):
-    """Raised when the Ostrogradski top-momentum relation has more than one branch.
-
-    p_top = dL/dq^(n) can be inverted for q^(n) uniquely only when L is (at most)
-    quadratic in its highest derivative -- then the relation is affine and the
-    Legendre transform is single-valued. If L is nonlinear in q^(n) (e.g. a
-    (q^(n))^4 term, or q^(n) appearing inside a non-polynomial function), the
-    inversion has several roots, each giving a different Hamiltonian on a
-    different sheet of phase space.
-
-    There is no purely local rule for which branch is "physical": the standard
-    choice is the sheet that connects continuously to the non-degenerate /
-    weak-coupling limit, or the one consistent with a reference trajectory. That
-    choice belongs to the caller, so this is surfaced rather than silently
-    resolved by taking the first root.
-    """
-
     def __init__(self, branches):
         self.branches = branches
         super().__init__(
@@ -73,12 +56,8 @@ def ostrogradskiHamiltonian(lagrangian, coords, order=None, constants=None):
 
     solutions = sp.solve(topEquations, topDerivativeSymbols, dict=True)
     if not solutions:
-        # Degenerate: the top-momentum relation is not invertible for q^(n).
-        # Return the constraint structure rather than raising -- see item 8.
         return analyzeDegenerateLagrangian(lagrangian, coords, resolvedOrder, constants)
     if len(solutions) > 1:
-        # Multiple branches => L is nonlinear in q^(n) and the Legendre transform
-        # is multi-valued. Refuse to guess; see NonUniqueTopDerivativeError.
         raise NonUniqueTopDerivativeError(
             [{str(k): v for k, v in solution.items()} for solution in solutions]
         )
@@ -116,8 +95,6 @@ def ostrogradskiHamiltonian(lagrangian, coords, order=None, constants=None):
 
 
 def _flatCanonicalPairs(positionSymbols, momentumSymbols):
-    """Flatten the per-coordinate canonical symbols into paired flat lists so that
-    {positions[k], momenta[k]} = 1 for every k."""
     positions, momenta = [], []
     for perCoordPositions, perCoordMomenta in zip(positionSymbols, momentumSymbols):
         positions.extend(perCoordPositions)
@@ -126,19 +103,12 @@ def _flatCanonicalPairs(positionSymbols, momentumSymbols):
 
 
 def analyzeDegenerateLagrangian(lagrangian, coords, order=None, constants=None):
-    """Primary-constraint detection + first/second-class classification for a
-    Lagrangian whose top-momentum relation p_n = dL/dq^(n) cannot be inverted.
-
-    Scope: primary constraints from the top-momentum Hessian null space, the
-    Poisson-bracket matrix among them, and the {phi, H} consistency check.
-    Secondary constraints are flagged, not computed; no Dirac bracket.
-    """
     lagrangian = sp.expand(sp.sympify(lagrangian))
     resolvedOrder = lagrangianOrder(lagrangian, coords) if order is None else order
     noCoords = len(coords)
 
     positionSymbols, momentumSymbols = _canonicalSymbols(noCoords, resolvedOrder)
-    multiplierSymbols = [sp.Symbol(f"u{i}") for i in range(noCoords)]  # undetermined q_i^(n)
+    multiplierSymbols = [sp.Symbol(f"u{i}") for i in range(noCoords)]
 
     canonicalMap = {}
     for i in range(noCoords):
@@ -148,12 +118,10 @@ def analyzeDegenerateLagrangian(lagrangian, coords, order=None, constants=None):
 
     lagrangianCanonical = sp.expand(lagrangian.subs(canonicalMap, simultaneous=True))
 
-    # top-momentum relations  P_i^n - dL/dq_i^(n)  in canonical variables
     topPartials = [sp.diff(lagrangianCanonical, multiplierSymbols[i]) for i in range(noCoords)]
     topMomenta = [momentumSymbols[i][resolvedOrder - 1] for i in range(noCoords)]
     topRelations = [sp.expand(topMomenta[i] - topPartials[i]) for i in range(noCoords)]
 
-    # Hessian W_ab = d^2 L / dq_a^(n) dq_b^(n); its null space gives the primary constraints
     hessian = sp.Matrix(
         noCoords, noCoords,
         lambda a, b: sp.diff(topPartials[a], multiplierSymbols[b]),
@@ -165,15 +133,12 @@ def analyzeDegenerateLagrangian(lagrangian, coords, order=None, constants=None):
         scale = sp.ilcm(*[int(d) for d in denominators]) if denominators else 1
         integerVector = [sp.nsimplify(scale * component) for component in nullVector]
         expression = sp.expand(sum(integerVector[a] * topRelations[a] for a in range(noCoords)))
-        # the multiplier parts cancel by construction (W . nullVector = 0); drop any residue
         expression = sp.expand(expression.subs({u: 0 for u in multiplierSymbols}))
         if expression != 0:
             constraints.append(
                 PrimaryConstraint(expression, origin="top-momentum relation not invertible")
             )
 
-    # canonical H_c = sum P * velocity - L_c, with solvable multipliers eliminated
-    # and the remaining (undetermined) ones set to zero on the primary surface.
     solvableForMultipliers = sp.solve(
         [relation for relation in topRelations if relation.free_symbols & set(multiplierSymbols)],
         multiplierSymbols,

@@ -1,9 +1,3 @@
-"""Pais-Uhlenbeck oscillator: symbolic EOM and numerical Hamiltonian conservation.
-
-Assertion-based versions of the checks previously only printed by
-experiments/pu_oscillator_validation.py.
-"""
-
 import numpy as np
 
 from experiments.pu_oscillator_validation import (
@@ -20,7 +14,7 @@ def test_ostrogradski_el_matches_legacy_second_order_operator():
 
 def test_pais_uhlenbeck_equation_of_motion():
     matches, elExpression, order = paisUhlenbeckEquationOfMotion()
-    assert order == 2  # highest derivative in L is qddot; the resulting EOM is 4th order
+    assert order == 2
     assert matches, f"PU Euler-Lagrange expression != q'''' + (w1^2+w2^2) q'' + w1^2 w2^2 q:\n{elExpression}"
 
 

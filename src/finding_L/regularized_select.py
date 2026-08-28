@@ -1,14 +1,3 @@
-"""Regularisation-path model selection from a Gram matrix -- an additive
-alternative to the greedy forward selection in `gram_forward_select.py`.
-
-Both routines here solve the same problem the greedy path does: find sparse `c`
-with  theta_kinetic + sum_j c_j theta_j ~= 0  , given only  G = Theta^T Theta  and
-b = -G[:, kinetic]  (so `Theta` is never materialised, same as the streaming path).
-
-Nothing in this module is imported by the existing discovery pipeline; it exists
-to be compared against it (see experiments/model_selection_comparison.py).
-"""
-
 import numpy as np
 
 
@@ -19,9 +8,6 @@ def _lstsqOnActive(gram, b, active):
 
 
 def sequentialThresholdedLeastSquares(gram, b, kineticIndex, relativeThreshold=1e-2, maxIterations=12):
-    """SINDy-style STLSQ. Start from the full ordinary least-squares fit, zero the
-    coefficients below `relativeThreshold * max|c|`, refit on the survivors, repeat
-    to a fixed point. Returns (activeIndices, coefficients)."""
     candidates = [index for index in range(gram.shape[0]) if index != kineticIndex]
     active = list(candidates)
 
@@ -39,13 +25,6 @@ def sequentialThresholdedLeastSquares(gram, b, kineticIndex, relativeThreshold=1
 
 
 def lassoPathFromGram(gram, b, kineticIndex, nLambdas=40, lambdaRatio=1e-3, maxIterations=400, tolerance=1e-8):
-    """Coordinate-descent LASSO regularisation path from the Gram matrix.
-
-    Minimises  1/2 c^T G c - b^T c + lambda ||c||_1  over the non-kinetic columns,
-    for a geometric sequence of lambda from lambda_max (all-zero solution) down to
-    lambdaRatio * lambda_max. Returns (lambdas, coefficientPaths) where
-    coefficientPaths[k] is the coefficient vector (length n-1) at lambdas[k].
-    """
     candidates = [index for index in range(gram.shape[0]) if index != kineticIndex]
     subGram = gram[np.ix_(candidates, candidates)]
     subB = b[candidates]
@@ -72,9 +51,6 @@ def lassoPathFromGram(gram, b, kineticIndex, nLambdas=40, lambdaRatio=1e-3, maxI
 
 
 def lassoSelect(gram, b, kineticIndex, relativeThreshold=1e-2, **pathKwargs):
-    """Pick the sparsest LASSO-path solution whose least-squares refit residual is
-    within 5% of the densest solution's, then hard-threshold and refit (debiased
-    LASSO). Returns (activeIndices, coefficients)."""
     lambdas, paths, candidates = lassoPathFromGram(gram, b, kineticIndex, **pathKwargs)
 
     targetNormSq = gram[kineticIndex, kineticIndex]

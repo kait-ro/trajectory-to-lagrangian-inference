@@ -15,18 +15,6 @@ def _reduceToZero(expression):
 
 
 def eulerLagrangeResidual(lagrangianFunctional, coords, vels, order=None):
-    """Euler-Lagrange residual of a Lagrangian *functional* (q_i(t) form).
-
-    Order-aware. `order` defaults to the highest time-derivative order present:
-
-      order == 1  ->  the ordinary Euler-Lagrange operator
-                      (generation.eqnofmotion.EulerLagrangeEqn), which is what
-                      every 2nd-order recovery is judged with.
-      order >= 2  ->  the full Ostrogradski operator
-                      sum_k (-1)^k d^k/dt^k dL/dq^(k)
-                      (generation.ostrogradski.eulerLagrangeExpression), so
-                      higher-derivative (Phase 2) recoveries can be judged too.
-    """
     lagrangian = sp.expand(lagrangianFunctional)
     resolvedOrder = lagrangianOrder(lagrangian, list(coords)) if order is None else order
 
@@ -45,12 +33,6 @@ def isNullLagrangian(lagrangianFunctional, coords, vels, order=None):
 
 
 def reconstructBoundaryPotential(lagrangianFunctional, coords, vels):
-    """Recover F with dL = dF/dt, for a first-order dL affine in the velocities.
-
-    Returns None when dL is higher-order or not a genuine total time derivative;
-    the null-Lagrangian test in `isNullLagrangian` is the authoritative check,
-    this is only a convenience that names the boundary term when it can.
-    """
     expanded = sp.expand(lagrangianFunctional)
 
     if lagrangianOrder(expanded, list(coords)) > 1:
@@ -103,14 +85,6 @@ class EquivalenceVerdict:
 
 
 def classifyLagrangianPair(lagrangianFunctionalA, lagrangianFunctionalB, coords, vels, order=None):
-    """Decide whether two Lagrangian functionals are the same physical theory.
-
-    They are equivalent iff their difference is a null Lagrangian: the
-    Euler-Lagrange operator annihilates it identically (not just numerically
-    small). A nonzero EL residual means the two produce different equations of
-    motion, so treating them as "the same" would reflect loose acceptance
-    tolerances rather than a real total-derivative degeneracy.
-    """
     difference = sp.expand(lagrangianFunctionalA - lagrangianFunctionalB)
 
     if difference == 0:

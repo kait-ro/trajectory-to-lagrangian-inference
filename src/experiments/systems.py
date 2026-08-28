@@ -22,13 +22,6 @@ class PhysicalSystem:
     noTrajectories: int = 150
     initialStateScale: float = 1.0
     noiseLevels: tuple = (0.0, 0.05, 0.10, 0.25, 0.50)
-    # Search budgets, NOT tolerances. startingMaxDegree is where the candidate
-    # library starts before on-demand expansion; maxRounds caps the number of
-    # forward-selection rounds. maxRounds is deliberately large so that one of
-    # the stopping conditions (A converged / B stalled / C stagnated), never the
-    # round cap, decides whether a recovery succeeds. All actual tolerances live
-    # in experiments.discovery.FROZEN_TOLERANCES and are identical for every
-    # system -- there are no per-system tolerance fields.
     startingMaxDegree: int = 2
     maxRounds: int = 150
 

@@ -1,5 +1,3 @@
-"""Equivalence-class classifier: null-Lagrangian pairs vs physically distinct pairs."""
-
 import sympy as sp
 
 from finding_L.equivalence_class import classifyLagrangianPair, isNullLagrangian
@@ -13,7 +11,6 @@ def _base_lagrangian(coords, vels):
 def test_total_time_derivative_difference_is_equivalent():
     _t, coords, vels = defineCoordinates(4)
     base = _base_lagrangian(coords, vels)
-    # 3/10 d/dt( q0^2/2 + q1^2/2 ) written as its Lagrangian form
     nullAddition = sp.Rational(3, 10) * (coords[0] * vels[0] + coords[1] * vels[1])
 
     verdict = classifyLagrangianPair(base + nullAddition, base, coords, vels)
@@ -47,7 +44,6 @@ def test_identical_lagrangians_are_equivalent():
 def test_higher_order_total_derivative_is_null():
     _t, coords, vels = defineCoordinates(1)
     q = coords[0]
-    # d/dt( q q' ) = q'^2 + q q''  -- a genuine null Lagrangian for an order-2 theory
     difference = sp.diff(q, TIME) ** 2 + q * sp.diff(q, TIME, 2)
 
     isNull, residual = isNullLagrangian(difference, coords, vels, order=2)

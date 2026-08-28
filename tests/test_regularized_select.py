@@ -1,5 +1,3 @@
-"""STLSQ and LASSO-path model selection from a Gram matrix."""
-
 import numpy as np
 
 from finding_L.higher_order_discovery import forwardSelectFromGram
@@ -47,16 +45,14 @@ def test_all_three_selectors_agree_on_clean_data():
 
 
 def test_stlsq_is_more_robust_than_greedy_with_a_correlated_distractor():
-    # a distractor column highly correlated with a true one + noise: greedy can
-    # be lured onto it; STLSQ starts from the full fit and thresholds it away.
     rng = np.random.default_rng(1)
     n = 1500
     columns = rng.standard_normal((n, 6))
-    columns[:, 4] = columns[:, 0] + rng.normal(0.0, 0.05, n)   # distractor ~ column 0
-    columns[:, 5] = -(1.7 * columns[:, 0] + 0.9 * columns[:, 2]) + rng.normal(0.0, 0.02, n)  # kinetic
+    columns[:, 4] = columns[:, 0] + rng.normal(0.0, 0.05, n)
+    columns[:, 5] = -(1.7 * columns[:, 0] + 0.9 * columns[:, 2]) + rng.normal(0.0, 0.02, n)
     gram = columns.T @ columns
     b = -gram[:, 5]
 
     stlsqActive, _c = sequentialThresholdedLeastSquares(gram, b, 5, relativeThreshold=1e-2)
-    assert 4 not in stlsqActive  # distractor rejected
+    assert 4 not in stlsqActive
     assert {0, 2}.issubset(set(stlsqActive))

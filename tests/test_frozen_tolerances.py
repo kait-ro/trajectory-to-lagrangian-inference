@@ -1,5 +1,3 @@
-"""The blind-holdout discipline: one frozen tolerance set, identical for every system."""
-
 import dataclasses
 
 from experiments.discovery import FROZEN_TOLERANCES, lockedDiscoveryTolerances
@@ -30,8 +28,5 @@ def test_frozen_set_matches_library_defaults():
 
 
 def test_maxrounds_is_a_generous_budget_not_a_decider():
-    # maxRounds must never be the thing that ends the search: it has to sit well
-    # above where Condition A/B/C fires. The clean isotropic recovery converges
-    # in ~53 rounds; require a healthy margin for every system.
     for system in SYSTEMS.values():
         assert system.maxRounds >= 120, f"{system.name} maxRounds={system.maxRounds} is too tight"

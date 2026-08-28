@@ -91,12 +91,6 @@ def buildEulerLagrangeMatrix(library, coordinate, lagrangianOrder, noStateVars, 
     return matrix, elExpressions
 
 
-# --- Multi-field generalisation -------------------------------------------------
-# State symbols form a grid s[field][level], level 0..lagrangianOrder. The
-# Euler-Lagrange matrix stacks one row-block per field (rows = timepoints x fields),
-# exactly as the ordinary 2nd-order streaming path stacks per-coordinate blocks.
-
-
 def stateGridSymbols(noFields, lagrangianOrder):
     return [
         [sp.Symbol(f"s{field}_{level}") for level in range(lagrangianOrder + 1)]
@@ -133,10 +127,6 @@ def multiFieldMonomialToCoordinates(monomial, coords, noFields, lagrangianOrder)
 
 
 def buildMultiFieldElMatrix(library, noFields, lagrangianOrder, derivativeData):
-    """derivativeData: list over derivative levels 0..columnOrder, each an array of
-    shape (rows, noFields). Returns (matrix, elExpressions) with the matrix stacked
-    field-by-field: matrix[j*rows:(j+1)*rows, c] is coord j's EL column for candidate c.
-    """
     columnOrder = len(derivativeData) - 1
     noRows = derivativeData[0].shape[0]
     _t, coords, _v = defineCoordinates(noFields)

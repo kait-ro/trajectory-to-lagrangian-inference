@@ -50,9 +50,6 @@ def detectGhost(lagrangian, coords, order=None, constants=None, eigenvalueTolera
     hamiltonianData = ostrogradskiHamiltonian(lagrangian, coords, order, constants)
 
     if isinstance(hamiltonianData, DegenerateLagrangianResult):
-        # Degenerate Lagrangian: the naive Ostrogradski Hamiltonian does not
-        # exist. The ghost question is only meaningful after constrained-Hamiltonian
-        # reduction (out of scope). Report the constraint structure instead.
         try:
             roots = characteristicRoots(lagrangian, coords, order)
             stability = dynamicalStability(roots)

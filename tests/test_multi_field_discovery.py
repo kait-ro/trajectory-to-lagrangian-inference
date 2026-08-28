@@ -1,5 +1,3 @@
-"""Multi-coordinate higher-derivative recovery: a coupled Pais-Uhlenbeck chain."""
-
 import numpy as np
 import sympy as sp
 
@@ -23,7 +21,7 @@ def test_multi_field_el_matrix_stacks_one_block_per_field():
     matrix, elExpressions = buildMultiFieldElMatrix(library, 2, 1, data)
     assert matrix.shape == (rows * 2, len(library))
     assert len(elExpressions) == len(library)
-    assert len(elExpressions[0]) == 2  # one EL expression per field
+    assert len(elExpressions[0]) == 2
 
 
 def _recovers_coupled_chain(noFields, coupling):
@@ -48,7 +46,7 @@ def test_two_field_coupled_pu_recovered_up_to_null_lagrangian():
     grid = stateGridSymbols(2, 2)
     crossTerm = sp.expand(grid[0][0] * grid[1][0])
     coefficient = next(c for monomial, c in selected if sp.expand(monomial - crossTerm) == 0)
-    assert abs(coefficient - 2 * 0.3) < 1e-3  # coeff(q0 q1) == 2 * coupling
+    assert abs(coefficient - 2 * 0.3) < 1e-3
 
 
 def test_three_field_coupled_pu_recovered_up_to_null_lagrangian():

@@ -17,8 +17,6 @@ COLUMN_ORDER = 2 * LAGRANGIAN_ORDER
 
 
 def _equivalenceToTruePu(recoveredState, expectedState):
-    # Shared equivalence-class test: (recovered - expected) is physically
-    # negligible iff the Ostrogradski Euler-Lagrange operator annihilates it.
     _t, coords, vels = defineCoordinates(1)
     difference = stateToCoordinate(recoveredState - expectedState, NO_STATE_VARS, coords[0])
     isNull, residual = isNullLagrangian(difference, coords, vels, order=LAGRANGIAN_ORDER)

@@ -1,5 +1,3 @@
-"""ROC-style ghost detection: no false positives / negatives on the clean battery."""
-
 import sympy as sp
 
 from experiments.ghost_detection_validation import _ghostBattery, rocReport

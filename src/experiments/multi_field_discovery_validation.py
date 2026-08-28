@@ -1,12 +1,3 @@
-"""Multi-coordinate higher-derivative recovery: a chain of position-coupled
-Pais-Uhlenbeck oscillators, recovered from trajectory data.
-
-The single-coordinate `recoverHigherOrderLagrangian` generalises to
-`recoverMultiFieldHigherOrderLagrangian`: the Euler-Lagrange matrix stacks one
-row-block per field, the isotropic top-derivative kinetic term is fixed, and
-forward selection recovers the rest -- including the cross-field coupling.
-"""
-
 import json
 import os
 
@@ -69,15 +60,12 @@ def run():
         cleanColumns = [np.asarray(c, dtype=float) for c in columns]
         records.append(_scenario(f"ground_truth_{noFields}field", noFields, coupling, cleanColumns))
 
-    # (b) noise added straight to the derivative columns -- isolates the recovery
-    #     step's own tolerance from the (much harder) differentiation step.
     dt, columns = multiFieldGroundTruthColumns(2, COLUMN_LEVEL, coupling=0.3, steps=12000, noTrajectories=6)
     exact = [np.asarray(c, dtype=float) for c in columns]
     rng = np.random.default_rng(303)
     perturbed = [c + rng.normal(0.0, 1e-3 * c.std(), c.shape) for c in exact]
     records.append(_scenario("columns_perturbed_0.1pct_2field", 2, 0.3, perturbed))
 
-    # (c) the realistic path: noisy positions -> spline derivatives (differentiation-limited)
     noisyPositions = exact[0] + rng.normal(0.0, 3e-4 * exact[0].std(), exact[0].shape)
     splined = [
         np.column_stack([smoothingSplineDerivatives(noisyPositions[:, f], dt, COLUMN_LEVEL)[level] for f in range(2)])

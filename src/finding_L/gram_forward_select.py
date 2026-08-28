@@ -11,11 +11,6 @@ def fitActiveCoefficientsFromGram(G: np.ndarray, b: np.ndarray, activeIndices: l
     try:
         coefficients = np.linalg.solve(subG, subB)
     except np.linalg.LinAlgError:
-        # The active Gram block is singular: two or more selected candidate EL
-        # columns are (numerically) collinear -- typically a velocity alias that
-        # slipped past dropKineticAliasColumns' cosine tolerance. lstsq still
-        # returns a minimum-norm fit, but the coefficient split between the
-        # collinear terms is then arbitrary, so make the event visible.
         warnings.warn(
             f"fitActiveCoefficientsFromGram: singular active Gram block "
             f"(active set size {len(activeIndices)}); falling back to lstsq. "

@@ -29,7 +29,7 @@ def generateDatasetStreaming(
         writer.writerow(header)
 
         rowsBuffer = []
-        
+
         for trajectoryId in range(noTrajectories):
             initialState = np.random.uniform(-1, 1, size=2 * noCoords)
             t_arr, q_arr, qdot_arr, qddot_arr = simulateTrajectory(

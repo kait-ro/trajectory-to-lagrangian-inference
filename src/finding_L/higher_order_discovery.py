@@ -31,7 +31,6 @@ def stateToCoordinate(stateExpression, noStateVars, coordinate):
 
 
 def multiFieldStateToCoordinates(stateExpression, noFields, lagrangianOrder, coords=None):
-    """s{i}_{k} -> (k-th time derivative of coords[i])."""
     if coords is None:
         _t, coords, _v = defineCoordinates(noFields)
     grid = stateGridSymbols(noFields, lagrangianOrder)
@@ -72,14 +71,6 @@ def forwardSelectFromGram(gramMatrix, kineticIndex, maxRounds=25):
 
 
 def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
-    """How well an order-`lagrangianOrder` Euler-Lagrange equation can explain the data.
-
-    Builds the order-`order` Euler-Lagrange matrix, then measures the least-squares
-    residual of projecting the q^(order)^2 kinetic EL column onto the span of every
-    other EL column: ||EL(kinetic) + design c|| / ||EL(kinetic)||. Small => the data
-    satisfies an order-`order` Euler-Lagrange equation. This is a feasibility test,
-    not a sparse recovery, so no alias filter is applied.
-    """
     noStateVars = lagrangianOrder + 1
     library = buildHigherOrderLibrary(noStateVars, libraryMaxDegree)
     coordinate = sp.Function("q0")(TIME)
@@ -92,7 +83,7 @@ def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
 
     kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[lagrangianOrder] ** 2)
     if kineticMonomial not in keptLibrary:
-        return 1.0  # the top-derivative-squared term carries no signal here
+        return 1.0
     kineticIndex = keptLibrary.index(kineticMonomial)
 
     kineticColumn = keptMatrix[:, kineticIndex]
@@ -105,26 +96,13 @@ def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
 
 
 def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, convergenceTolerance=None, stagnationTolerance=None):
-    """Infer the Lagrangian order directly from trajectory data.
-
-    Tries orders 1..maxOrder. For each it fixes the q^(order)^2 kinetic term and
-    records the forward-selection scaled residual (same machinery as
-    `recoverHigherOrderLagrangian`). It returns the smallest order whose residual
-    falls below the convergence tolerance (Condition A). If none converge it
-    returns the order at which the residual stopped meaningfully improving
-    (Condition C): a lower order that already explains the data as well as the
-    next one.
-
-    Returns (order, perOrder) where perOrder is a list of
-    {"order", "scaledResidual"} dicts.
-    """
     convergenceTolerance = (
         checkResidualToleranceFromGram.__defaults__[0]
         if convergenceTolerance is None
         else convergenceTolerance
     )
     stagnationTolerance = (
-        checkCorrelationCutoff.__defaults__[0]  # 0.1 relative improvement floor
+        checkCorrelationCutoff.__defaults__[0]
         if stagnationTolerance is None
         else stagnationTolerance
     )
@@ -142,10 +120,6 @@ def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, conv
     if not perOrder:
         raise ValueError("not enough derivative levels to test even order 1")
 
-    # No order satisfies an Euler-Lagrange equation to tolerance. Fall back to
-    # Condition C: the first order after which the residual stops meaningfully
-    # improving -- a lower order that already explains the data as well as the
-    # next one. (The caller can see no entry has converged=True.)
     for i in range(1, len(perOrder)):
         earlier = perOrder[i - 1]["scaledResidual"]
         later = perOrder[i]["scaledResidual"]
@@ -162,9 +136,6 @@ def recoverHigherOrderLagrangian(
     snapRelativeTolerance=0.05,
     kineticLevel=None,
 ):
-    # A standard system's kinetic term is q'^2; a PU-type (order >= 2) is q''^2.
-    # min(2, order) keeps the historical behaviour (order-2 and order-3 libraries
-    # both fix q''^2) while making order 1 work.
     if kineticLevel is None:
         kineticLevel = min(2, lagrangianOrder)
 
@@ -181,7 +152,7 @@ def recoverHigherOrderLagrangian(
 
     kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[kineticLevel] ** 2)
     if kineticMonomial not in keptLibrary:
-        return kineticMonomial, []  # the kinetic term carries no signal in this data
+        return kineticMonomial, []
     kineticIndex = keptLibrary.index(kineticMonomial)
     keptMatrix, keptLibrary, kineticIndex = dropKineticAliasColumns(keptMatrix, keptLibrary, kineticIndex)
 
@@ -205,14 +176,6 @@ def recoverMultiFieldHigherOrderLagrangian(
     kineticLevel=None,
     snapRelativeTolerance=0.05,
 ):
-    """Multi-coordinate analogue of recoverHigherOrderLagrangian.
-
-    `derivativeData` is a list over derivative levels 0..2*lagrangianOrder, each an
-    array of shape (rows, noFields). The isotropic kinetic term
-    sum_i (d^k q_i / dt^k)^2 (k = kineticLevel, default lagrangianOrder) is fixed
-    to coefficient 1; forward selection recovers everything else, including
-    cross-field coupling monomials.
-    """
     kineticLevel = lagrangianOrder if kineticLevel is None else kineticLevel
     grid = stateGridSymbols(noFields, lagrangianOrder)
     library = multiFieldLibrary(noFields, lagrangianOrder, libraryMaxDegree)

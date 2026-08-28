@@ -1,12 +1,3 @@
-"""Infer the Lagrangian order straight from trajectory data.
-
-`inferLagrangianOrder` tries orders 1..maxOrder; for each it measures how well an
-order-n Euler-Lagrange equation can account for the q^(n)-squared kinetic term
-(least-squares projection onto the other EL columns). The smallest order that
-satisfies an EL equation to tolerance (Condition A) is the answer; failing that,
-the order after which the residual stops improving (Condition C).
-"""
-
 import json
 import os
 
@@ -23,8 +14,6 @@ RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results"
 
 
 def _anharmonicOscillatorColumns(steps=9000, noTrajectories=8, dt=0.003, seed=5):
-    """L = 1/2 q'^2 - 1/2 q^2 - 1/4 q^4  (order 1). Derivative levels 0..4, exact
-    via repeated application of the equation of motion q'' = -q - q^3."""
     _t, coords, _v = defineCoordinates(1)
     q = coords[0]
     lagrangian = sp.Rational(1, 2) * sp.diff(q, TIME) ** 2 - sp.Rational(1, 2) * q ** 2 - sp.Rational(1, 4) * q ** 4

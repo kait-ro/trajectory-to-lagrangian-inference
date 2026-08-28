@@ -8,34 +8,8 @@ from finding_L.main_streaming import runDiscoveryStreaming
 from finding_L.report import stateExpressionToFunctional
 from generation.eqnofmotion import defineCoordinates
 
-# The system the recovery pipeline was originally shaped around. NOTHING is
-# calibrated against it here -- no tuning search is run. It is only the reference
-# point that the blind holdout (any other system) is contrasted with, and the
-# "calibration" in its name is historical (it is the dataset stem too).
 REFERENCE_SYSTEM = "isotropic_quartic_calibration"
 
-# --- Frozen tolerances -----------------------------------------------------
-# The library default tolerances, frozen verbatim as the SINGLE set used for
-# every system. These are NOT the output of a calibration / parameter search --
-# they are the defaults that already ship in finding_L, written out here so the
-# value reported as "the tolerance" is provably the value the pipeline uses.
-#
-# Every entry is threaded explicitly into runDiscoveryStreaming (below), so
-# changing a value here changes behaviour; none of them fall back to a function
-# default. PhysicalSystem carries no tolerance fields -- the holdout cannot
-# diverge.
-#
-#   key                    source (file / function / default)
-#   ---------------------  --------------------------------------------------------------
-#   correlationCutoff      finding_L/stopping_conditions.py checkCorrelationCutoff  (0.1)
-#   residualRmsTolerance   finding_L/gram_forward_select.py checkResidualToleranceFromGram  (0.01)
-#   pruneRelativeThreshold finding_L/gram_forward_select.py pruneNearZeroCoefficients  (1e-2)
-#   stagnationTolerance    finding_L/stopping_conditions.py checkResidualStagnation  (0.01)
-#   stagnationPatience     finding_L/stopping_conditions.py checkResidualStagnation  (3)
-#   degreeCap              max monomial degree the library may expand to. 4 == the degree
-#                          of both benchmark Lagrangians (quartic); this is the value the
-#                          sweep has always used. The checkDegreeExpansionNeeded signature
-#                          default (6) is only a generic-API fallback and is never used here.
 FROZEN_TOLERANCES = {
     "correlationCutoff": stopping_conditions.checkCorrelationCutoff.__defaults__[0],
     "residualRmsTolerance": gram_forward_select.checkResidualToleranceFromGram.__defaults__[0],
@@ -47,12 +21,6 @@ FROZEN_TOLERANCES = {
 
 
 def lockedDiscoveryTolerances(system=None):
-    """The exact tolerance kwargs runSystemDiscovery feeds the pipeline.
-
-    `system` is accepted and ignored: the point is that the frozen set does not
-    depend on which system is being run, so `lockedDiscoveryTolerances(a) ==
-    lockedDiscoveryTolerances(b)` for any two systems.
-    """
     return dict(FROZEN_TOLERANCES)
 
 
@@ -73,9 +41,6 @@ class RecoveryComparison:
     spuriousMonomials: list
     coefficientErrors: dict
     maxAbsoluteError: float
-    # Verdict from finding_L.equivalence_class on (discovered - expected): is the
-    # difference a genuine null Lagrangian (EL operator identically zero), or are
-    # the two Lagrangians physically distinct and only numerically close?
     equivalenceVerdict: object = None
 
     @property
@@ -135,11 +100,6 @@ def compareToExpected(
 
     success = not missing and not spurious and coefficientsWithinTolerance
 
-    # Equivalence-class check: rather than trusting "same monomials, close
-    # coefficients", verify that (discovered - expected) is annihilated by the
-    # Euler-Lagrange operator. difference == 0 => exact structural match;
-    # null but nonzero => the two differ only by a total time derivative;
-    # non-null => physically distinct theories that merely scored similarly.
     if noCoords is None:
         noCoords = _inferNoCoords(expectedExpression, discovered.expression)
     _t, coords, vels = defineCoordinates(noCoords)
@@ -153,24 +113,14 @@ def compareToExpected(
 
 
 def runSystemDiscovery(system, csvPath, chunkRows=200_000):
-    """Run streaming discovery on `system` with the frozen tolerance set.
-
-    Every tolerance comes from FROZEN_TOLERANCES; only search budgets
-    (noCoords, startingMaxDegree, maxRounds) come from the PhysicalSystem.
-
-    Returns (discovered, logFrame, tolerancesUsed). `tolerancesUsed` is the exact
-    dict passed to the pipeline, so a caller can assert the holdout ran on the
-    same set as the reference system.
-    """
     tolerances = lockedDiscoveryTolerances(system)
-    # Provably identical to the frozen set for any system:
     assert tolerances == FROZEN_TOLERANCES, "discovery tolerances diverged from FROZEN_TOLERANCES"
 
     discovered, logFrame = runDiscoveryStreaming(
         csvPath,
         noCoords=system.noCoords,
-        startingMaxDegree=system.startingMaxDegree,   # search budget
-        maxRounds=system.maxRounds,                    # search budget
+        startingMaxDegree=system.startingMaxDegree,
+        maxRounds=system.maxRounds,
         chunkRows=chunkRows,
         degreeCap=tolerances["degreeCap"],
         residualRmsTolerance=tolerances["residualRmsTolerance"],

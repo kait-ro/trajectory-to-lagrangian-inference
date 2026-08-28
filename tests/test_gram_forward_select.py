@@ -1,5 +1,3 @@
-"""Forward selection on a synthetic Gram matrix with a known sparse solution."""
-
 import numpy as np
 
 from finding_L.gram_forward_select import fitActiveCoefficientsFromGram
@@ -9,8 +7,6 @@ from finding_L.higher_order_discovery import forwardSelectFromGram
 def _synthetic_gram(nRows=600, nCandidates=7, kineticIndex=6, trueCoeffs=((0, 2.0), (3, -3.5)), seed=0):
     rng = np.random.default_rng(seed)
     columns = rng.standard_normal((nRows, nCandidates))
-    # Make the kinetic column an exact sparse combination of two others:
-    #   theta_kinetic = -(2.0 * theta_0 - 3.5 * theta_3)
     combination = np.zeros(nRows)
     for index, coefficient in trueCoeffs:
         combination += coefficient * columns[:, index]
@@ -47,7 +43,6 @@ def test_empty_active_set_returns_empty():
 
 
 def test_singular_active_block_warns_and_falls_back_to_lstsq(recwarn):
-    # Two identical active columns -> singular G[S,S] -> lstsq fallback (item 5).
     gram = np.array([[1.0, 1.0, 0.5], [1.0, 1.0, 0.5], [0.5, 0.5, 2.0]])
     b = np.array([1.0, 1.0, 0.3])
     coefficients = fitActiveCoefficientsFromGram(gram, b, [0, 1])

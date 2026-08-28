@@ -39,9 +39,6 @@ def runNoiseCurve(systemName, noiseLevels=None, chunkRows=150_000):
     for noiseLevel in levels:
         csvPath = datasetPath(system, noiseLevel)
         discovered, logFrame, tolerancesUsed = runSystemDiscovery(system, csvPath, chunkRows=chunkRows)
-        # Provably the same frozen set the reference system runs on -- no
-        # per-system retuning is even representable (PhysicalSystem has no
-        # tolerance fields).
         assert tolerancesUsed == FROZEN_TOLERANCES, (
             f"{system.name} at noise {noiseLevel} ran on {tolerancesUsed}, "
             f"not the frozen set {FROZEN_TOLERANCES}"
@@ -126,8 +123,6 @@ def writeArtifacts(system, rows, isHoldout):
             f"{row['finalScaledResidual']:>11.4f} {equivCell:>8}"
         )
 
-    # Per-level equivalence-class verdict. Compact here (the full EquivalenceVerdict
-    # text -- dL and its EL residual -- is in the .json under equivalenceVerdictText).
     lines.append("")
     lines.append("Equivalence-class verdict per noise level (discovered - expected):")
     for row in rows:

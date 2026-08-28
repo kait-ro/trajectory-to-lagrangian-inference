@@ -1,16 +1,3 @@
-"""End-to-end recovery from noisy position data only.
-
-noisy q(t)  ->  differentiation-method selection (unsupervised)
-            ->  Lagrangian-order inference
-            ->  higher-derivative Lagrangian recovery
-            ->  Ostrogradski ghost verdict
-            ->  confidence estimate (agreement across differentiation methods)
-
-No step is given ground-truth derivatives or a pre-chosen differentiation method.
-Single coordinate (multi-field noisy differentiation is not yet good enough --
-see experiments/multi_field_discovery_validation.py).
-"""
-
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -29,9 +16,6 @@ from generation.numerical_diff import (
     smoothingSplineDerivatives,
 )
 
-# differentiation methods to grid-search. finite differences are excluded: the
-# study in experiments/differentiation_method_study.py shows they are unusable
-# above order 1 under any noise.
 _METHODS = {
     "savitzky_golay": savitzkyGolayDerivatives,
     "smoothing_spline": smoothingSplineDerivatives,
@@ -43,16 +27,14 @@ _METHODS = {
 class PipelineResult:
     differentiationMethod: str
     lagrangianOrder: int
-    discoveredLagrangian: sp.Expr        # state-symbol form (s0, s1, ...)
+    discoveredLagrangian: sp.Expr
     discoveredLagrangianInCoords: sp.Expr
-    ghost: object                        # True / False / None
+    ghost: object
     ghostDetail: str
-    # Separate confidences: order and ghost are robust to the differentiation
-    # step; the detailed coefficients are not (see PROJECT.md problem A).
     orderConfidence: float
     ghostConfidence: float
     coefficientConfidence: float
-    confidence: float                    # overall = the weakest link
+    confidence: float
     perMethod: list = field(default_factory=list)
     coefficientSpread: dict = field(default_factory=dict)
     detail: str = ""
@@ -81,7 +63,7 @@ class PipelineResult:
         return "\n".join(lines)
 
 
-_METHOD_MAX_LEVEL = {"smoothing_spline": 4}  # the quintic spline caps at 4th derivative
+_METHOD_MAX_LEVEL = {"smoothing_spline": 4}
 
 
 def _derivativeColumns(name, method, signal, dt, maxLevel):
@@ -91,8 +73,6 @@ def _derivativeColumns(name, method, signal, dt, maxLevel):
 
 
 def _lagrangianElResidual(recoveredStateExpression, noStateVars, order, columns):
-    """||EL(recovered L)|| / ||EL(kinetic)|| on the data -- how well the *recovered*
-    (sparse) Lagrangian, not a dense projection, satisfies its own EL equation."""
     _t, coords, _v = defineCoordinates(1)
     coordinate = coords[0]
     kineticLevel = min(2, order)
@@ -132,7 +112,7 @@ def _recoverAndDiagnose(columns, maxOrder, libraryMaxDegree):
         verdict = detectGhost(lagrangianInCoords, coords, order=order)
         ghost = verdict.get("ghost")
         ghostDetail = verdict.get("detail", "")
-    except Exception as error:  # ghost analysis can fail on a badly-recovered L
+    except Exception as error:
         ghost, ghostDetail = None, f"ghost analysis failed: {error}"
 
     return {
@@ -155,7 +135,6 @@ def _coefficientDict(expression):
 
 
 def endToEndPipeline(noisyPositions, dt, maxOrder=3, libraryMaxDegree=2):
-    """Run the whole chain on a single noisy position signal. Returns PipelineResult."""
     signal = np.asarray(noisyPositions, dtype=float).reshape(-1)
     maxLevel = 2 * maxOrder
 
@@ -173,16 +152,10 @@ def endToEndPipeline(noisyPositions, dt, maxOrder=3, libraryMaxDegree=2):
     if not usable:
         raise RuntimeError("every differentiation method failed on this signal")
 
-    # order by majority vote across methods (robust); ghost by majority among
-    # methods that agree on that order.
     orders = [record["order"] for record in usable]
     consensusOrder = max(set(orders), key=orders.count)
     atConsensus = [record for record in usable if record["order"] == consensusOrder]
 
-    # --- differentiation-method selection --------------------------------------
-    # A recovered L with a huge coefficient is a near-total-derivative artifact of
-    # bad higher derivatives; prefer plausible recoveries, then lowest own-EL
-    # residual.
     def _maxAbsCoefficient(record):
         return max((abs(v) for v in _coefficientDict(record["recovered"]).values()), default=0.0)
 
@@ -190,13 +163,10 @@ def endToEndPipeline(noisyPositions, dt, maxOrder=3, libraryMaxDegree=2):
     pool = plausible if plausible else atConsensus
     best = min(pool, key=lambda record: record["orderResidual"])
 
-    # --- confidences ----------------------------------------------------------
     ghosts = [record["ghost"] for record in atConsensus]
     orderConfidence = orders.count(consensusOrder) / len(orders)
     ghostConfidence = ghosts.count(best["ghost"]) / len(ghosts)
 
-    # coefficient spread across the *plausible* recoveries only (an implausible
-    # one is a known artifact, not a genuine disagreement)
     coefficientSpread = {}
     spreadPool = plausible if len(plausible) > 1 else atConsensus
     coefficientDicts = [_coefficientDict(record["recovered"]) for record in spreadPool]
@@ -217,7 +187,7 @@ def endToEndPipeline(noisyPositions, dt, maxOrder=3, libraryMaxDegree=2):
         )
     )
 
-    confidence = float(min(orderConfidence, ghostConfidence))  # overall = the robust part
+    confidence = float(min(orderConfidence, ghostConfidence))
     if not plausibleSelection or maxSpread > 1.0:
         detailSuffix = " Coefficients are unreliable (differentiation-limited); trust the order and ghost verdict, not the numbers."
     else:

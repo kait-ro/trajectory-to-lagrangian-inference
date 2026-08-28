@@ -44,9 +44,6 @@ def groundTruthTrajectory(omega1=1.0, omega2=2.0, dt=0.005, steps=12000, initial
     return dtOut, position, columns
 
 
-# --- Multi-field Pais-Uhlenbeck (a chain of PU oscillators, position-coupled) ---
-
-
 def multiFieldPaisUhlenbeckLagrangian(coords, omega1=1.0, omega2=2.0, coupling=0.0):
     total = sp.Integer(0)
     for coordinate in coords:
@@ -84,8 +81,6 @@ def multiFieldGroundTruthColumns(
     noTrajectories=6,
     seed=11,
 ):
-    """Returns (dt, columns) with columns a list over derivative levels 0..maxLevel,
-    each an array of shape (rows, noFields), rows = steps * noTrajectories."""
     _t, coords, _v = defineCoordinates(noFields)
     lagrangian = multiFieldPaisUhlenbeckLagrangian(coords, omega1, omega2, coupling)
     stateDerivative, equationOrder, _n = buildStateDerivative(lagrangian, coords)
@@ -100,14 +95,12 @@ def multiFieldGroundTruthColumns(
         )
         for level in range(equationOrder):
             perLevel[level].append(perDerivative[level])
-        # the top derivative q^(equationOrder) from the state derivative itself
         states = np.hstack(perDerivative)
         top = np.array([stateDerivative(state)[-noFields:] for state in states])
         topLevel.append(top)
 
     columns = [np.vstack(level) for level in perLevel] + [np.vstack(topLevel)]
     while len(columns) <= maxLevel:
-        # analytic continuation: q^(k) = -(w1^2+w2^2) q^(k-2) - w1^2 w2^2 q^(k-4) + coupling neighbours
         higher = -(omega1 ** 2 + omega2 ** 2) * columns[-2] - omega1 ** 2 * omega2 ** 2 * columns[-4]
         columns.append(higher)
     return dt, columns[: maxLevel + 1]

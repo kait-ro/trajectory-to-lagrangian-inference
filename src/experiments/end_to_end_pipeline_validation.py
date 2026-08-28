@@ -1,11 +1,3 @@
-"""End-to-end recovery from noisy position data only (Pais-Uhlenbeck).
-
-`finding_L.pipeline.endToEndPipeline` is handed nothing but a noisy q(t) and dt.
-It grid-searches the differentiation methods, infers the Lagrangian order,
-recovers the Lagrangian, runs the ghost verdict, and returns separate
-order / ghost / coefficient confidences.
-"""
-
 import json
 import os
 

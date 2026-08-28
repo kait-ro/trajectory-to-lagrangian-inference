@@ -1,5 +1,3 @@
-"""End-to-end pipeline: noisy positions -> Lagrangian + ghost verdict + confidence."""
-
 import numpy as np
 import sympy as sp
 
@@ -22,7 +20,6 @@ def test_pipeline_recovers_pu_order_and_ghost_from_noisy_positions():
     assert result.ghost is True
     assert result.orderConfidence == 1.0
     assert result.ghostConfidence == 1.0
-    # every method contributed a per-method record
     assert len(result.perMethod) == 3
 
 
@@ -33,11 +30,10 @@ def test_pipeline_gets_the_pu_coefficients_at_zero_noise():
     coefficients = sp.expand(result.discoveredLagrangian).as_coefficients_dict()
     s0, s2 = sp.Symbol("s0"), sp.Symbol("s2")
     assert abs(float(coefficients[s0 ** 2]) - 4.0) < 0.3
-    assert abs(float(coefficients[s2 ** 2]) - 1.0) < 1e-6  # kinetic fixed
+    assert abs(float(coefficients[s2 ** 2]) - 1.0) < 1e-6
 
 
 def test_pipeline_never_feeds_ground_truth_derivatives():
-    # the public entry takes only (positions, dt) -- no derivative argument exists
     import inspect
 
     signature = inspect.signature(endToEndPipeline)

@@ -1,16 +1,3 @@
-"""Greedy forward selection vs. regularisation-path model selection.
-
-Additive comparison only -- the production pipeline (main_streaming ->
-gram_forward_select) is untouched. For each benchmark system and noise level we
-build ONE degree-4 streaming Gram matrix and run three selectors on it:
-
-  * greedy      -- the existing OMP-style forward selection (forwardSelectFromGram)
-  * stlsq       -- SINDy sequential thresholded least squares
-  * lasso       -- coordinate-descent LASSO path + debiased refit
-
-then score each recovered Lagrangian against ground truth.
-"""
-
 import json
 import os
 
@@ -27,8 +14,8 @@ from finding_L.report import assembleDiscoveredLagrangian
 from generation.eqnofmotion import TIME, defineCoordinates
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
-DEGREE = FROZEN_TOLERANCES["degreeCap"]  # 4
-PRUNE = FROZEN_TOLERANCES["pruneRelativeThreshold"]  # 1e-2
+DEGREE = FROZEN_TOLERANCES["degreeCap"]
+PRUNE = FROZEN_TOLERANCES["pruneRelativeThreshold"]
 
 
 def _buildGram(system, csvPath, chunkRows=150_000):
@@ -128,8 +115,8 @@ def run():
     lines.append("    recovers exactly at 2%, then starts keeping spurious terms at 5%.")
     lines.append("  * the debiased LASSO path recovers BOTH systems exactly through 5% noise.")
     lines.append("")
-    lines.append("So the regularisation-path approach clearly beats greedy here, and the ~1-2%")
-    lines.append("ceiling in PROJECT.md problem A is a property of the *greedy selector*, not of")
+    lines.append("So the regularisation-path approach clearly beats greedy here: the ~1-2% noise")
+    lines.append("ceiling is a property of the *greedy selector*, not of")
     lines.append("ordinary-least-squares Lagrangian recovery. The debiased LASSO path is a strong")
     lines.append("replacement candidate. It is kept additive for now -- this is one seed per level")
     lines.append("on two systems; a switch of the production default should first be validated over")

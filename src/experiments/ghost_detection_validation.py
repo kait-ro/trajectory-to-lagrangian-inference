@@ -117,21 +117,18 @@ def _cleanPositionSignal(lagrangian, coords, dt=0.004, steps=13000, seed=0):
 
 
 def _ghostBattery():
-    """Labelled single-coordinate systems. label in {healthy, ghost}."""
     _t, coords, _v = defineCoordinates(1)
     q = coords[0]
     v = sp.diff(q, TIME)
     a = sp.diff(q, TIME, 2)
     systems = []
 
-    # healthy: 2nd-order, H bounded below
     systems.append(("sho_w1", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(1, 2) * q ** 2))
     systems.append(("sho_w3", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(9, 2) * q ** 2))
     systems.append(
         ("anharmonic", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(1, 2) * q ** 2 - sp.Rational(1, 4) * q ** 4)
     )
 
-    # ghost: genuine Ostrogradski (higher-derivative, indefinite H, oscillatory)
     for w1, w2, tag in [(1.0, 2.0, "12"), (1.0, 3.0, "13"), (0.7, 1.6, "07_16")]:
         pu = _stateToCoordinate(paisUhlenbeckStateLagrangian(NO_STATE_VARS, w1, w2), q)
         systems.append((f"pais_uhlenbeck_{tag}", "ghost", pu))
@@ -142,9 +139,6 @@ def _ghostBattery():
 
 
 def rocReport(noiseLevels=(0.0, 0.002, 0.005, 0.01), seeds=(0, 1, 2)):
-    """Aggregate ghost-detection statistics over a labelled battery: false-positive
-    rate (a healthy system flagged as a ghost) and false-negative rate (a genuine
-    ghost missed), per noise level, from the end-to-end pipeline."""
     battery = _ghostBattery()
     perNoise = {}
     trials = []
@@ -185,8 +179,6 @@ def rocReport(noiseLevels=(0.0, 0.002, 0.005, 0.01), seeds=(0, 1, 2)):
             "ghostTrials": ghostTrials,
         }
 
-    # borderline: a genuinely degenerate Lagrangian must be flagged degenerate,
-    # not scored as a false positive/negative.
     _t, coords2, _v = defineCoordinates(2)
     q1, q2 = coords2
     degenerate = sp.diff(q1, TIME) * q2 - sp.Rational(1, 2) * q2 ** 2 - sp.Rational(1, 2) * q1 ** 2

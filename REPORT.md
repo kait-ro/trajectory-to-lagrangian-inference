@@ -246,8 +246,8 @@ is itself the fragile step.
 ## 2026-08-28 — Items 1–7 (hardening + docs)
 
 Append-only entry. Nothing above this line was rewritten. Companion docs added:
-[`../README.md`](../README.md), [`../PROJECT.md`](../PROJECT.md),
-[`../LOGIC.md`](../LOGIC.md), [`../ForwardSelection.md`](../ForwardSelection.md).
+`README.md`, `PROJECT.md`, `LOGIC.md`, `ForwardSelection.md` (the latter three were
+later merged into `README.md` — see the 2026-08-29 doc-consolidation entry).
 
 ### 1. Blind-holdout discipline made real
 - `experiments/discovery.py`: `FROZEN_TOLERANCES` — the **finding_L library
@@ -434,3 +434,24 @@ noise sweep, `pu_oscillator_validation`, `differentiation_method_study`,
 `higher_order_discovery_validation`, `jerk_snap_distractor_study` and the
 `ghost_detection_validation` reference/noise-boundary sections are unchanged.
 Test count 19 → 43.
+
+---
+
+## 2026-08-29 — Doc consolidation + comment removal
+
+Append-only. Nothing above this line was changed except two now-dead markdown
+link targets in the 2026-08-28 entry (the files they pointed to were merged).
+
+- **`src/REPORT.md` → `REPORT.md`** (moved to repo root, next to `README.md`).
+- **`PROJECT.md`, `LOGIC.md`, `ForwardSelection.md` merged into `README.md`** and
+  deleted. `README.md` is now the single design doc: what it is, layout, install
+  and run, how the pipeline works end to end, forward selection + tolerances +
+  the regularised alternatives, current status, open problems, roadmap. The
+  duplicated "open problems / noise-ceiling / tolerance table / result table"
+  material that had been copied across three or four files now appears once.
+- **All comments and docstrings removed from `src/` and `tests/`** — restoring the
+  original house style (the pre-session codebase had zero of either). Rationale
+  that lived in docstrings now lives in `README.md`. `__init__.py` files are
+  empty package markers. No behaviour change; 43 tests still pass.
+- `experiments/model_selection_comparison.py` no longer prints a `PROJECT.md`
+  reference in its generated report text.

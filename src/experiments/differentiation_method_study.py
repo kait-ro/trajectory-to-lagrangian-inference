@@ -6,14 +6,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-
-from experiments.pu_system import groundTruthTrajectory
 from generation.numerical_diff import (
     finiteDifferenceDerivatives,
+    relativeL2Error,
     savitzkyGolayDerivatives,
     smoothingSplineDerivatives,
-    relativeL2Error,
 )
+
+from experiments.pu_system import groundTruthTrajectory
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 MAX_ORDER = 4

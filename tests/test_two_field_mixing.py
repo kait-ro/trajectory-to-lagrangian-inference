@@ -1,5 +1,3 @@
-"""Two coupled fields: mass-matrix eigenvalue spectrum + potential recovery."""
-
 import sympy as sp
 
 from experiments.two_field_mixing import normalModeSpectrum, recoverTwoFieldPotential, simulateTwoField
@@ -10,12 +8,12 @@ def test_mass_matrix_mixing_drives_the_spectrum_complex():
     stiffness = sp.Matrix([[sp.Rational(3, 2), 0], [0, 1]])
 
     _v, _c, real = normalModeSpectrum(sp.eye(2), stiffness)
-    assert real  # diagonal, positive -> two real oscillatory modes
+    assert real
 
-    strongMix = sp.Matrix([[1, sp.Rational(6, 5)], [sp.Rational(6, 5), 1]])  # eigenvalues 2.2, -0.2
-    assert min(complex(e).real for e in strongMix.eigenvals()) < 0  # M indefinite
+    strongMix = sp.Matrix([[1, sp.Rational(6, 5)], [sp.Rational(6, 5), 1]])
+    assert min(complex(e).real for e in strongMix.eigenvals()) < 0
     _v, _c, realStrong = normalModeSpectrum(strongMix, stiffness)
-    assert not realStrong  # M^-1 K inherits a negative eigenvalue -> runaway
+    assert not realStrong
 
 
 def test_two_field_el_matrix_recovers_the_off_diagonal_potential():
@@ -28,5 +26,4 @@ def test_two_field_el_matrix_recovers_the_off_diagonal_potential():
 
     assert abs(coefficients[q0 ** 2] - (-float(stiffness[0, 0]))) < 0.02
     assert abs(coefficients[q1 ** 2] - (-float(stiffness[1, 1]))) < 0.02
-    # the mixing term: coeff(q0 q1) = -2 K_12
     assert abs(coefficients[sp.expand(q0 * q1)] - (-2 * float(stiffness[0, 1]))) < 0.02

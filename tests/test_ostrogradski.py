@@ -1,5 +1,3 @@
-"""Ostrogradski / Euler-Lagrange machinery against closed-form results."""
-
 import pytest
 import sympy as sp
 
@@ -25,9 +23,6 @@ def test_simple_harmonic_oscillator_euler_lagrange():
     residual = eulerLagrangeExpression(lagrangian, q, order=1)
     acceleration = sp.diff(q, TIME, 2)
 
-    # eulerLagrangeExpression (pipelineSign=False) returns dL/dq - d/dt dL/dqdot
-    # = -omega**2 q - qddot, i.e. -(qddot + omega**2 q). The equation of motion
-    # qddot + omega**2 q = 0 is recovered up to the overall sign.
     assert sp.simplify(residual + acceleration + OMEGA ** 2 * q) == 0
 
 
@@ -39,8 +34,8 @@ def test_simple_harmonic_oscillator_ostrogradski_hamiltonian():
     data = ostrogradskiHamiltonian(lagrangian, coords)
     assert data["order"] == 1
 
-    position = data["positionSymbols"][0][0]   # Q0_0  (== q)
-    momentum = data["momentumSymbols"][0][0]   # P0_1  (== qdot)
+    position = data["positionSymbols"][0][0]
+    momentum = data["momentumSymbols"][0][0]
 
     expected = sp.Rational(1, 2) * momentum ** 2 + sp.Rational(1, 2) * OMEGA ** 2 * position ** 2
     assert sp.expand(data["hamiltonian"] - expected) == 0
@@ -57,8 +52,6 @@ def test_free_particle_hamiltonian_is_kinetic_only():
 
 
 def test_nonlinear_top_derivative_raises_rather_than_guessing_a_branch():
-    # L nonlinear in qddot -> the top-momentum relation p = qddot + qddot**3 has
-    # three roots, so the Legendre transform is multi-valued (item 4).
     _t, coords, _vels = defineCoordinates(1)
     q = coords[0]
     acceleration = sp.diff(q, TIME, 2)
