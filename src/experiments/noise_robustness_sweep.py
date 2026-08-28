@@ -184,7 +184,7 @@ def writeArtifacts(system, rows, isHoldout):
 
 def _parseArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("system", nargs="?", default="isotropic_quartic_calibration", choices=sorted(SYSTEMS))
+    parser.add_argument("system", nargs="?", default=REFERENCE_SYSTEM, choices=sorted(SYSTEMS))
     parser.add_argument("--noise", type=float, nargs="*", default=None)
     parser.add_argument("--chunk-rows", type=int, default=150_000)
     return parser.parse_args()

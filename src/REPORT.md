@@ -320,7 +320,22 @@ with fixed, non-overlapping scope. The "Still-open A/B/C" material is carried
 forward in `PROJECT.md`; the copy above is the earlier snapshot and stays as
 history.
 
-### Numerical results
+### Numerical results — unchanged
 Items 1–7 are plumbing / reporting / tests. Threaded tolerances equal the old
-effective defaults; `degreeCap` stays 4; `maxRounds` only grew. Re-run
-comparison against the Phase 1/2/3 numbers above: see the code-review deliverable.
+effective defaults; `degreeCap` stays 4; `maxRounds` only grew (every run still
+terminates via Condition A/B/C, never the cap). Re-ran the full Phase 1 noise
+sweep for both systems and every Phase 2/3 study; results are identical to the
+"Results" section above:
+
+| run | baseline (miss / spur / max\|Δcoef\|) | re-run | 
+|---|---|---|
+| isotropic 0 % | recovered 0 / 0 / 0.000 | recovered 0 / 0 / 0.0000 |
+| isotropic 1 % | recovered 0 / 0 / 0.001 | recovered 0 / 0 / 0.0006 |
+| isotropic 2 % | failed 7 / 19 / 0.26 | failed 7 / 19 / 0.2607 |
+| isotropic 5 % | failed 20 / 20 / 0.51 | failed 20 / 20 / 0.5087 |
+| isotropic 10 % | failed 21 / 11 / 0.57 | failed 21 / 11 / 0.5651 |
+| anharmonic 0 % | 1 / 3 / 0.016 | failed 1 / 3 / 0.0159 |
+
+PU EOM exact; Ostrogradski H drift 1.04e-10; higher-order recovery still PU-up-to-
+total-derivative; jerk library still fails; ghost verdicts and eigenvalues
+identical; differentiation breakdown table identical.
