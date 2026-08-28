@@ -6,10 +6,12 @@ import sympy as sp
 
 from experiments.pu_system import groundTruthColumns, paisUhlenbeckStateLagrangian
 from finding_L.higher_order_discovery import recoverHigherOrderLagrangian, stateToCoordinate
-from generation.eqnofmotion import defineCoordinates
+from finding_L.pipeline import endToEndPipeline
+from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ghost_detection import detectGhost
+from generation.higher_order_integrator import simulateHigherOrderTrajectory
 from generation.numerical_diff import smoothingSplineDerivatives
-from generation.ostrogradski import TIME
+from generation.ostrogradski import buildStateDerivative
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 NO_STATE_VARS = 3
@@ -104,15 +106,124 @@ def noiseBoundaryReport():
     return "\n".join(lines), rows
 
 
+def _cleanPositionSignal(lagrangian, coords, dt=0.004, steps=13000, seed=0):
+    stateDerivative, equationOrder, noCoords = buildStateDerivative(lagrangian, coords)
+    rng = np.random.default_rng(seed)
+    initialState = rng.uniform(-0.8, 0.8, size=equationOrder * noCoords)
+    _times, perDerivative = simulateHigherOrderTrajectory(
+        list(initialState), stateDerivative, dt, steps, equationOrder, noCoords
+    )
+    return dt, perDerivative[0][:, 0]
+
+
+def _ghostBattery():
+    """Labelled single-coordinate systems. label in {healthy, ghost}."""
+    _t, coords, _v = defineCoordinates(1)
+    q = coords[0]
+    v = sp.diff(q, TIME)
+    a = sp.diff(q, TIME, 2)
+    systems = []
+
+    # healthy: 2nd-order, H bounded below
+    systems.append(("sho_w1", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(1, 2) * q ** 2))
+    systems.append(("sho_w3", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(9, 2) * q ** 2))
+    systems.append(
+        ("anharmonic", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(1, 2) * q ** 2 - sp.Rational(1, 4) * q ** 4)
+    )
+
+    # ghost: genuine Ostrogradski (higher-derivative, indefinite H, oscillatory)
+    for w1, w2, tag in [(1.0, 2.0, "12"), (1.0, 3.0, "13"), (0.7, 1.6, "07_16")]:
+        pu = _stateToCoordinate(paisUhlenbeckStateLagrangian(NO_STATE_VARS, w1, w2), q)
+        systems.append((f"pais_uhlenbeck_{tag}", "ghost", pu))
+    puBase = _stateToCoordinate(paisUhlenbeckStateLagrangian(NO_STATE_VARS, 1.0, 2.0), q)
+    systems.append(("pais_uhlenbeck_plus_total_derivative", "ghost", sp.expand(puBase + 3 * sp.diff(q * v, TIME))))
+
+    return systems
+
+
+def rocReport(noiseLevels=(0.0, 0.002, 0.005, 0.01), seeds=(0, 1, 2)):
+    """Aggregate ghost-detection statistics over a labelled battery: false-positive
+    rate (a healthy system flagged as a ghost) and false-negative rate (a genuine
+    ghost missed), per noise level, from the end-to-end pipeline."""
+    battery = _ghostBattery()
+    perNoise = {}
+    trials = []
+
+    for noiseLevel in noiseLevels:
+        falsePositives = falseNegatives = healthyTrials = ghostTrials = undetermined = 0
+        for name, label, lagrangian in battery:
+            _t, coords, _v = defineCoordinates(1)
+            for seed in seeds:
+                dt, clean = _cleanPositionSignal(lagrangian, coords, seed=seed)
+                rng = np.random.default_rng(1000 + seed)
+                noisy = clean + rng.normal(0.0, noiseLevel * clean.std(), clean.shape)
+                try:
+                    result = endToEndPipeline(noisy, dt, maxOrder=2, libraryMaxDegree=4)
+                    verdict = result.ghost
+                except Exception:
+                    verdict = None
+                trials.append({"system": name, "label": label, "noiseLevel": noiseLevel, "seed": seed, "ghost": verdict})
+
+                if label == "healthy":
+                    healthyTrials += 1
+                    if verdict is True:
+                        falsePositives += 1
+                    elif verdict is None:
+                        undetermined += 1
+                else:
+                    ghostTrials += 1
+                    if verdict is False:
+                        falseNegatives += 1
+                    elif verdict is None:
+                        undetermined += 1
+
+        perNoise[noiseLevel] = {
+            "falsePositiveRate": falsePositives / max(healthyTrials, 1),
+            "falseNegativeRate": falseNegatives / max(ghostTrials, 1),
+            "undeterminedRate": undetermined / max(healthyTrials + ghostTrials, 1),
+            "healthyTrials": healthyTrials,
+            "ghostTrials": ghostTrials,
+        }
+
+    # borderline: a genuinely degenerate Lagrangian must be flagged degenerate,
+    # not scored as a false positive/negative.
+    _t, coords2, _v = defineCoordinates(2)
+    q1, q2 = coords2
+    degenerate = sp.diff(q1, TIME) * q2 - sp.Rational(1, 2) * q2 ** 2 - sp.Rational(1, 2) * q1 ** 2
+    degenerateVerdict = detectGhost(degenerate, coords2)
+    degenerateFlagged = bool(degenerateVerdict.get("degenerate"))
+
+    lines = ["Ghost detection -- aggregate statistics over a labelled battery", ""]
+    lines.append(f"battery: {sum(1 for _n, l, _s in battery if l == 'healthy')} healthy + "
+                 f"{sum(1 for _n, l, _s in battery if l == 'ghost')} ghost systems, {len(seeds)} seeds each")
+    lines.append("")
+    lines.append(f"{'noise':>7} {'FP rate':>9} {'FN rate':>9} {'undet.':>8}")
+    lines.append("-" * 36)
+    for noiseLevel, stats in perNoise.items():
+        lines.append(
+            f"{noiseLevel * 100:6.1f}% {stats['falsePositiveRate']:>9.2f} "
+            f"{stats['falseNegativeRate']:>9.2f} {stats['undeterminedRate']:>8.2f}"
+        )
+    lines.append("")
+    lines.append(f"borderline: degenerate Lagrangian flagged as degenerate (not FP/FN): {degenerateFlagged}")
+    return "\n".join(lines), {"perNoise": {str(k): v for k, v in perNoise.items()}, "trials": trials, "degenerateFlagged": degenerateFlagged}
+
+
 def run():
     referenceText, referenceRecords = referenceReport()
     boundaryText, boundaryRows = noiseBoundaryReport()
+    rocText, rocRecords = rocReport()
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
     with open(os.path.join(RESULTS_DIR, "ghost_detection.json"), "w") as handle:
-        json.dump({"reference": referenceRecords, "noiseBoundary": boundaryRows}, handle, indent=2, default=str)
+        json.dump(
+            {"reference": referenceRecords, "noiseBoundary": boundaryRows, "roc": rocRecords},
+            handle,
+            indent=2,
+            default=str,
+        )
 
-    report = referenceText + "\n" + boundaryText + "\n"
+    report = referenceText + "\n" + boundaryText + "\n\n" + rocText + "\n"
     with open(os.path.join(RESULTS_DIR, "ghost_detection.txt"), "w") as handle:
         handle.write(report)
     return report

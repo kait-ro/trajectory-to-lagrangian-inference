@@ -95,8 +95,9 @@ def _lagrangianElResidual(recoveredStateExpression, noStateVars, order, columns)
     (sparse) Lagrangian, not a dense projection, satisfies its own EL equation."""
     _t, coords, _v = defineCoordinates(1)
     coordinate = coords[0]
+    kineticLevel = min(2, order)
     lagrangian = stateToCoordinate(recoveredStateExpression, noStateVars, coordinate)
-    kinetic = stateToCoordinate(sp.Symbol(f"s{order}") ** 2, noStateVars, coordinate)
+    kinetic = stateToCoordinate(sp.Symbol(f"s{kineticLevel}") ** 2, noStateVars, coordinate)
 
     columnOrder = 2 * order
     dataSymbols = [sp.Symbol(f"d{k}") for k in range(columnOrder + 1)]

@@ -179,5 +179,628 @@
         1.2298672864835498
       ]
     }
-  ]
+  ],
+  "roc": {
+    "perNoise": {
+      "0.0": {
+        "falsePositiveRate": 0.0,
+        "falseNegativeRate": 0.0,
+        "undeterminedRate": 0.38095238095238093,
+        "healthyTrials": 9,
+        "ghostTrials": 12
+      },
+      "0.002": {
+        "falsePositiveRate": 0.0,
+        "falseNegativeRate": 0.0,
+        "undeterminedRate": 0.47619047619047616,
+        "healthyTrials": 9,
+        "ghostTrials": 12
+      },
+      "0.005": {
+        "falsePositiveRate": 0.0,
+        "falseNegativeRate": 0.0,
+        "undeterminedRate": 0.47619047619047616,
+        "healthyTrials": 9,
+        "ghostTrials": 12
+      },
+      "0.01": {
+        "falsePositiveRate": 0.0,
+        "falseNegativeRate": 0.0,
+        "undeterminedRate": 0.5714285714285714,
+        "healthyTrials": 9,
+        "ghostTrials": 12
+      }
+    },
+    "trials": [
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": false
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 1,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.0,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": false
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 1,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.002,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": false
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.005,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w1",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": false
+      },
+      {
+        "system": "sho_w3",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": false
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "anharmonic",
+        "label": "healthy",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_12",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_13",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_07_16",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 0,
+        "ghost": true
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 1,
+        "ghost": null
+      },
+      {
+        "system": "pais_uhlenbeck_plus_total_derivative",
+        "label": "ghost",
+        "noiseLevel": 0.01,
+        "seed": 2,
+        "ghost": null
+      }
+    ],
+    "degenerateFlagged": true
+  }
 }

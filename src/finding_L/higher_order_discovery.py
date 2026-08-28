@@ -160,7 +160,14 @@ def recoverHigherOrderLagrangian(
     lagrangianOrder,
     libraryMaxDegree=2,
     snapRelativeTolerance=0.05,
+    kineticLevel=None,
 ):
+    # A standard system's kinetic term is q'^2; a PU-type (order >= 2) is q''^2.
+    # min(2, order) keeps the historical behaviour (order-2 and order-3 libraries
+    # both fix q''^2) while making order 1 work.
+    if kineticLevel is None:
+        kineticLevel = min(2, lagrangianOrder)
+
     library = buildHigherOrderLibrary(noStateVars, libraryMaxDegree)
     coordinate = sp.Function("q0")(TIME)
     matrix, _elExpressions = buildEulerLagrangeMatrix(
@@ -172,7 +179,9 @@ def recoverHigherOrderLagrangian(
     keptLibrary = [monomial for monomial, keep in zip(library, keepMask) if keep]
     keptMatrix = matrix[:, keepMask]
 
-    kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[2] ** 2)
+    kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[kineticLevel] ** 2)
+    if kineticMonomial not in keptLibrary:
+        return kineticMonomial, []  # the kinetic term carries no signal in this data
     kineticIndex = keptLibrary.index(kineticMonomial)
     keptMatrix, keptLibrary, kineticIndex = dropKineticAliasColumns(keptMatrix, keptLibrary, kineticIndex)
 
