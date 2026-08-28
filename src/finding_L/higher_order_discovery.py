@@ -1,5 +1,4 @@
 import sympy as sp
-
 from finding_L.gram_forward_select import (
     checkResidualToleranceFromGram,
     fitActiveCoefficientsFromGram,

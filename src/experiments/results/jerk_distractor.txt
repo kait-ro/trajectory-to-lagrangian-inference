@@ -1,4 +1,4 @@
-Phase 2.4 - jerk/snap distractor library (Pais-Uhlenbeck)
+Jerk/snap distractor library study (Pais-Uhlenbeck)
 library: degree<=2 monomials in (q, q', q'', q'''), Lagrangian order 3, EL columns to order 6
 expected order-2 Lagrangian: 4.0*s0**2 - 5.0*s1**2 + s2**2
 

@@ -1,46 +1,8 @@
 # finding_L — hardening, higher-derivative extension, cleanup
 
-Work log covering the readable-Lagrangian fix, the ordinary and higher-derivative
-discovery tracks, ghost detection, a cleanup pass, and the follow-up hardening
-(blind-holdout discipline, equivalence-class wiring, a pytest suite, file
-renames). Everything here is reproducible with the commands in
+Work log covering the readable-Lagrangian fix, Phases 1–3, a cleanup pass, and the
+follow-up fixes. Everything here is reproducible with the commands in
 [How to run](#how-to-run). Artifacts land in `src/experiments/results/`.
-
-> **Doc map.** Project overview → [`PROJECT.md`](../PROJECT.md); end-to-end
-> pipeline → [`LOGIC.md`](../LOGIC.md); the sparse-regression method and its
-> locked tolerances → [`ForwardSelection.md`](../ForwardSelection.md). This file
-> is the chronological log.
-
-## Hardening pass
-
-- **Blind-holdout discipline** (`experiments/discovery.py`,
-  `experiments/noise_robustness_sweep.py`). All discovery tolerances are
-  calibrated on `isotropic_quartic_calibration` and frozen in
-  `LOCKED_TOLERANCES`. `runSystemDiscovery(..., enforceLocked=True)` threads the
-  frozen values into `runDiscoveryStreaming` (which now takes `correlationCutoff`
-  explicitly) and raises if a non-calibration system overrides a locked
-  tolerance. The sweep prints the locked values and a `ROLE: CALIBRATION` /
-  `ROLE: BLIND HOLDOUT` banner into every artifact, plus an `equiv?` column.
-- **Equivalence-class check wired in.** `equivalence_class.py` moved
-  `experiments/ → finding_L/` and generalised to any Lagrangian order (full
-  Ostrogradski EL operator, order auto-resolved).
-  `experiments/discovery.compareToExpected` now calls `classifyLagrangianPair`
-  on every discovered-vs-expected comparison and returns the
-  `EquivalenceVerdict` on `RecoveryComparison`. The higher-derivative validation
-  studies call `isNullLagrangian` instead of ad-hoc inline residual checks.
-- **`ostrogradskiHamiltonian` branch safety.** Raises
-  `NonUniqueTopDerivativeError` when `L` is nonlinear in its highest derivative
-  (multi-valued Legendre transform) instead of silently taking `solutions[0]`.
-- **`fitActiveCoefficientsFromGram`** emits a `RuntimeWarning` when it falls back
-  to `lstsq` (singular active Gram block).
-- **Test suite** — `tests/` (`uv run pytest`): SHO Euler–Lagrange + Ostrogradski
-  Hamiltonian, Pais–Uhlenbeck EOM + Hamiltonian conservation, the
-  equivalence-class classifier both ways, forward selection on a synthetic Gram
-  matrix.
-- **File renames** — the `phaseN_*` experiment scripts are renamed to
-  descriptive names (`phase1_noise_curve → noise_robustness_sweep`,
-  `phase2_pu_oscillator → pu_oscillator_validation`, etc.); phase-number labels
-  removed from report text.
 
 ---
 
@@ -63,21 +25,19 @@ $PY -m experiments.generate_dataset anharmonic_chain_blind --noise 0.0 0.05 0.10
 # --- discovery: recover a Lagrangian from a dataset, with the readable report ---
 $PY -m finding_L.main_streaming                           # __main__ points at a generated dataset
 
-# --- equivalence-class machinery ---
-$PY -m finding_L.equivalence_class                        # constructed null-Lagrangian checks
+# --- Phase 1 ---
+$PY -m experiments.equivalence_class                      # 1.2 constructed null-Lagrangian checks
+$PY -m experiments.phase1_noise_curve isotropic_quartic_calibration   # 1.3 (also does 1.1's blind system)
+$PY -m experiments.phase1_noise_curve anharmonic_chain_blind
 
-# --- ordinary (2nd-order) discovery: calibration + blind holdout ---
-$PY -m experiments.noise_robustness_sweep isotropic_quartic_calibration   # calibration system
-$PY -m experiments.noise_robustness_sweep anharmonic_chain_blind          # blind holdout, locked tolerances
+# --- Phase 2 ---
+$PY -m experiments.phase2_pu_oscillator                   # 2.1 + 2.2 + 3.1 smoke test
+$PY -m experiments.phase2_differentiation_study           # 2.3 noisy higher-order differentiation
+$PY -m experiments.phase2_higher_order_discovery          # 2.4 (correct-order library)
+$PY -m experiments.phase2_jerk_distractor                 # 2.4 (jerk/snap distractors)
 
-# --- higher-derivative (Ostrogradski) track ---
-$PY -m experiments.pu_oscillator_validation               # Ostrogradski EL / Hamiltonian smoke test
-$PY -m experiments.differentiation_method_study           # noisy higher-order differentiation
-$PY -m experiments.higher_order_discovery_validation      # correct-order library recovery
-$PY -m experiments.jerk_snap_distractor_study             # jerk/snap distractor library
-
-# --- ghost detection ---
-$PY -m experiments.ghost_detection_validation             # ghost verdict vs measurement noise
+# --- Phase 3 ---
+$PY -m experiments.phase3_ghost_detection                 # 3.2 + 3.3 ghost verdict vs noise
 ```
 
 Programmatic use:
@@ -116,8 +76,7 @@ regenerable — the generators are seeded.
 - One time symbol. `TIME = sympy.Symbol("t")` is defined once in `generation/eqnofmotion.py`;
   every other module imports it. Removed the four scattered redefinitions
   (`eqnofmotion` had two local `sp.symbols("t")`, `ostrogradski` and
-  `equivalence_class` each had their own). `equivalence_class.py` later moved to
-  `finding_L/`.
+  `equivalence_class` each had their own).
 - `experiments/pu_system.py` — all Pais–Uhlenbeck helpers (`OMEGA1/OMEGA2`,
   `paisUhlenbeckLagrangian`, `paisUhlenbeckStateLagrangian`, `groundTruthColumns`)
   in one place. They were spread across three phase-2 files.
@@ -196,19 +155,18 @@ of scope for a cleanup pass.
 
 ### B. Jerk/snap libraries fail via on-shell EOM degeneracy
 
-`jerk_snap_distractor_study` still recovers `s2^2 - 7/30 s3^2` (picking jerk-squared) instead
+`phase2_jerk_distractor` still recovers `s2^2 - 7/30 s3^2` (picking jerk-squared) instead
 of the order-2 PU Lagrangian. On the solution manifold the higher derivatives satisfy
 `q^(6) = -5 q^(4) - 4 q̈` exactly, so the EL column of `q'''^2` is a linear combination of
 lower-order columns *for every trajectory*. Stacking trajectories does not lift this — they
 are all on-shell. The `dropKineticAliasColumns` filter removes the one exact alias it can
 see; the rest need either off-manifold data (perturb trajectories away from the EOM, which
 requires a different data source) or a hard prior that the Lagrangian order equals the
-kinetic term's order. **Order-2 libraries work; order-≥3 libraries do not.** The
-equivalence-class check (`finding_L/equivalence_class.isNullLagrangian`, called directly by
-`jerk_snap_distractor_study.py`) correctly flags every failed recovery as "not equivalent to
-the true Lagrangian", so at least the failure is detectable.
+kinetic term's order. **Order-2 libraries work; order-≥3 libraries do not.** The equivalence-class
+check (Phase 1.2) correctly flags every failed recovery as "not equivalent to the true
+Lagrangian", so at least the failure is detectable.
 
-### C. Blind-chain boundary site (holdout: interior vs. boundary)
+### C. Blind-chain boundary site (Phase 1.1)
 
 Even at 0 noise the last coordinate `q5` of the open chain is mis-recovered (a
 `q5^2 v5^2` term shadows `q5^4`). Same root cause as A — a velocity term genuinely
@@ -217,7 +175,7 @@ small errors. The interior 5 sites recover exactly.
 
 ---
 
-## Results (unchanged by the cleanup / hardening — re-verified)
+## Results (unchanged by the cleanup — re-verified)
 
 ### Immediate fix — readable Lagrangian
 `finding_L/report.assembleDiscoveredLagrangian` → `DiscoveredLagrangian(expression,
@@ -226,23 +184,19 @@ clean `q0, v0, …` symbols with coefficients snapped to smallest-denominator ra
 within 1 % relative; `text` groups terms by degree and shared coefficient with a
 `raw -> clean` table. Wired into `runDiscoveryStreaming`.
 
-### Blind holdout
+### Phase 1.1 blind holdout
 Unseen system (anisotropic anharmonic chain: per-site stiffness, sparse nearest-neighbour
-coupling, cubic + quartic), scored with the tolerances locked on the calibration system.
-At 0 noise, all 6 stiffnesses, all 5 couplings, and cubics + quartics on the 5 interior
-sites are **recovered exactly**; the boundary site `q5` fails (see Still-open C).
-`noise_robustness_sweep.py` marks this run `ROLE: BLIND HOLDOUT` and would raise if the
-system tried to retune a locked tolerance.
+coupling, cubic + quartic). At 0 noise, all 6 stiffnesses, all 5 couplings, and cubics +
+quartics on the 5 interior sites are **recovered exactly**; the boundary site `q5` fails
+(see Still-open C).
 
-### Equivalence-class check
-`finding_L/equivalence_class.py` (moved from `experiments/`, generalised to any Lagrangian
-order). `ΔL` → full Ostrogradski Euler–Lagrange operator → identically zero ⇒ genuine
-total-derivative degeneracy (also reconstructs `F` with `ΔL = dF/dt` for first-order `ΔL`);
-nonzero ⇒ physically distinct. Constructed both-way tests pass (`tests/test_equivalence_class.py`).
-Wired into `experiments/discovery.compareToExpected` (verdict on `RecoveryComparison`,
-`equiv?` column in the sweep) and called directly by the higher-derivative validation studies.
+### Phase 1.2 equivalence-class check
+`experiments/equivalence_class.py`. `ΔL` → existing Euler–Lagrange derivation → identically
+zero ⇒ genuine total-derivative degeneracy (also reconstructs `F` with `ΔL = dF/dt`);
+nonzero ⇒ numerical slop. Constructed both-way tests pass. Used throughout Phase 2 to
+interpret higher-derivative recoveries.
 
-### Noise curve
+### Phase 1.3 noise curve
 `results/noise_curve_*.{txt,png,json}`. **Recovers cleanly only for noise ≲ 1–2 %**
 (see Still-open A for the mechanism).
 
@@ -260,27 +214,25 @@ Blind anharmonic chain, 6 DOF: fails at 0 % on the boundary site only (1 missing
 spurious, max Δcoef 0.016) and collapses fully from 1 % — it has no clean-recovery band at
 all, i.e. the anisotropic/odd-parity system is strictly harder than the calibration system.
 
-### Ostrogradski EL / integrator (`pu_oscillator_validation.py`)
+### Phase 2.1 / 2.2 — Ostrogradski
 `generation/ostrogradski.py` — full operator `Σ (−d/dt)^k ∂L/∂q^(k)`, `pipelineSign` flag
 to match the existing 2nd-order sign convention (regression-tested identical).
 `generation/higher_order_integrator.py` — RK4 on `(q, q̇, q̈, q⃛)`. Pais–Uhlenbeck: EOM
 `q'''' + (ω₁²+ω₂²)q'' + ω₁²ω₂²q` exact; recovered frequencies [0.995, 1.990] vs [1, 2];
-Ostrogradski `H` conserved to 1e-10. `ostrogradskiHamiltonian` raises
-`NonUniqueTopDerivativeError` if `L` is nonlinear in its highest derivative. Asserted in
-`tests/test_ostrogradski.py`, `tests/test_pu_oscillator.py`.
+Ostrogradski `H` conserved to 1e-10.
 
-### Noisy higher-order differentiation (`differentiation_method_study.py`)
+### Phase 2.3 — noisy higher-order differentiation
 `results/differentiation_study.{txt,png}`. Finite differences unusable at order ≥ 2 under
 any noise (`error ∝ noise/dt^k`). Quintic **smoothing spline with GCV-style λ is the only
 method that survives to 3rd/4th order** — jerk / snap relative error ~2 % / ~18 % at 1 %
 position noise. Savitzky–Golay usable to ~3 %.
 
-### Jerk/snap library (`jerk_snap_distractor_study.py`)
+### Phase 2.4 — jerk/snap library
 Correct-order library: recovers the PU Lagrangian *up to a total derivative*
-(`q q''` in place of `−q'^2`), confirmed by the equivalence-class check, robust to ~3 % noise.
+(`q q''` in place of `−q'^2`), confirmed by the Phase 1.2 check, robust to ~3 % noise.
 Jerk-extended library: fails (Still-open B).
 
-### Ghost detection (`ghost_detection_validation.py`)
+### Phase 3 — ghost detection
 `generation/ghost_detection.detectGhost` — Ostrogradski `H`, Hessian definiteness, and
 EOM characteristic roots. Healthy oscillator → no ghost; PU → ghost; PU + boundary term →
 still ghost (verdict invariant under equivalence-class freedom). Run on the Lagrangian
@@ -288,3 +240,87 @@ still ghost (verdict invariant under equivalence-class freedom). Run on the Lagr
 signature (indefinite `H` + oscillatory dynamics) is qualitative and survives large
 coefficient errors. Conditional on correct model-order identification, which (Still-open A)
 is itself the fragile step.
+
+---
+
+## 2026-08-28 — Items 1–7 (hardening + docs)
+
+Append-only entry. Nothing above this line was rewritten. Companion docs added:
+[`../README.md`](../README.md), [`../PROJECT.md`](../PROJECT.md),
+[`../LOGIC.md`](../LOGIC.md), [`../ForwardSelection.md`](../ForwardSelection.md).
+
+### 1. Blind-holdout discipline made real
+- `experiments/discovery.py`: `FROZEN_TOLERANCES` — the **finding_L library
+  default** tolerances (`correlationCutoff` 0.1, `residualRmsTolerance` 0.01,
+  `pruneRelativeThreshold` 1e-2, `stagnationTolerance` 0.01, `stagnationPatience`
+  3, `degreeCap` 4), written out verbatim. **No calibration / tuning search was
+  run** — the wording everywhere says "frozen defaults", not "calibrated".
+- Provenance bug fixed: the old `LOCKED_TOLERANCES["degreeCap"]` read the
+  `checkDegreeExpansionNeeded` signature default (6) while runs used 4. Now a
+  single value (4, the degree of both quartic benchmarks) that is both reported
+  and used.
+- `correlationCutoff` and `pruneRelativeThreshold` are now real parameters of
+  `runDiscoveryStreaming` and are threaded from `FROZEN_TOLERANCES`; previously
+  only the function defaults were reachable, so "locking" them was unenforceable.
+- `PhysicalSystem` lost its `degreeCap` and `residualRmsTolerance` fields — there
+  are no per-system tolerances. `startingMaxDegree` / `maxRounds` remain but are
+  documented as search budgets; `maxRounds` raised to 150 for every system so a
+  stopping condition, never the round cap, decides success/failure.
+- `runSystemDiscovery` returns `(discovered, logFrame, tolerancesUsed)` and the
+  sweep asserts `tolerancesUsed == FROZEN_TOLERANCES` for every run — the holdout
+  provably uses the identical set. `tests/test_frozen_tolerances.py` locks this
+  in.
+- `noise_robustness_sweep.py` prints `frozenTolerancesReport()` and a
+  `ROLE: REFERENCE SYSTEM` / `ROLE: BLIND HOLDOUT` banner, plus an `equiv?` column
+  and the full per-noise-level `EquivalenceVerdict`.
+
+### 2. Equivalence-class check consolidated + order-aware
+- `experiments/equivalence_class.py` → `finding_L/equivalence_class.py`.
+- `eulerLagrangeResidual` now dispatches on order: order 1 uses the ordinary
+  `EulerLagrangeEqn`; order ≥ 2 uses the full Ostrogradski operator
+  `eulerLagrangeExpression`. So it can judge Phase 2 (higher-derivative)
+  recoveries, not just 2nd-order.
+- `experiments/discovery.compareToExpected` runs `classifyLagrangianPair` on
+  every discovered-vs-expected pair and returns the `EquivalenceVerdict` on
+  `RecoveryComparison`; `formatComparison` and the sweep artifacts surface it.
+- The inline null-Lagrangian checks in `higher_order_discovery_validation.py` and
+  `jerk_snap_distractor_study.py` now call `isNullLagrangian` — no parallel
+  copies. (`ghost_detection_validation.py` has no such inline check.)
+
+### 3. Renamed experiment scripts (cosmetic)
+`phase1_noise_curve → noise_robustness_sweep`,
+`phase2_differentiation_study → differentiation_method_study`,
+`phase2_pu_oscillator → pu_oscillator_validation`,
+`phase2_jerk_distractor → jerk_snap_distractor_study`,
+`phase2_higher_order_discovery → higher_order_discovery_validation`,
+`phase3_ghost_detection → ghost_detection_validation`. No Python module imported
+any of them. `[2.1]` / `[3.1]` / `Phase 2.4` labels in report text replaced with
+descriptive ones. (The "How to run" block above still lists the old names — see
+`README.md` for the current commands; this log is not rewritten.)
+
+### 4. `ostrogradskiHamiltonian` branch safety
+Raises `NonUniqueTopDerivativeError` (carrying `.branches`) when `sp.solve`
+returns >1 branch, i.e. `L` is nonlinear in its highest derivative and the
+Legendre transform is multi-valued. All existing systems (quadratic in the top
+derivative) are unaffected.
+
+### 5. `fitActiveCoefficientsFromGram` lstsq fallback
+Now emits a `RuntimeWarning` ("singular active Gram block ... coefficients on
+collinear terms are not individually identifiable") when it falls back from
+`np.linalg.solve` to `lstsq`. Behaviour otherwise unchanged.
+
+### 6. Test suite — `tests/` (`uv run pytest`, 17 tests)
+`test_ostrogradski.py`, `test_pu_oscillator.py`, `test_equivalence_class.py`,
+`test_gram_forward_select.py`, `test_frozen_tolerances.py`. Added `pytest` to the
+`dev` dependency group and `[tool.pytest.ini_options] pythonpath = ["src"]`.
+
+### 7. Docs
+`README.md` (was empty), `PROJECT.md`, `LOGIC.md`, `ForwardSelection.md` created
+with fixed, non-overlapping scope. The "Still-open A/B/C" material is carried
+forward in `PROJECT.md`; the copy above is the earlier snapshot and stays as
+history.
+
+### Numerical results
+Items 1–7 are plumbing / reporting / tests. Threaded tolerances equal the old
+effective defaults; `degreeCap` stays 4; `maxRounds` only grew. Re-run
+comparison against the Phase 1/2/3 numbers above: see the code-review deliverable.

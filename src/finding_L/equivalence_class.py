@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
 import sympy as sp
-
 from finding_L.report import stateExpressionToFunctional
-from generation.eqnofmotion import TIME
+from generation.eqnofmotion import TIME, EulerLagrangeEqn
 from generation.ostrogradski import eulerLagrangeExpression, lagrangianOrder
 
 
@@ -18,15 +17,25 @@ def _reduceToZero(expression):
 def eulerLagrangeResidual(lagrangianFunctional, coords, vels, order=None):
     """Euler-Lagrange residual of a Lagrangian *functional* (q_i(t) form).
 
-    Uses the full Ostrogradski operator sum_k (-1)^k d^k/dt^k dL/dq^(k), so it is
-    valid for higher-derivative Lagrangians, not only L(q, q'). `order` defaults
-    to the highest time-derivative order appearing in the expression.
+    Order-aware. `order` defaults to the highest time-derivative order present:
+
+      order == 1  ->  the ordinary Euler-Lagrange operator
+                      (generation.eqnofmotion.EulerLagrangeEqn), which is what
+                      every 2nd-order recovery is judged with.
+      order >= 2  ->  the full Ostrogradski operator
+                      sum_k (-1)^k d^k/dt^k dL/dq^(k)
+                      (generation.ostrogradski.eulerLagrangeExpression), so
+                      higher-derivative (Phase 2) recoveries can be judged too.
     """
     lagrangian = sp.expand(lagrangianFunctional)
     resolvedOrder = lagrangianOrder(lagrangian, list(coords)) if order is None else order
-    residual = [
-        eulerLagrangeExpression(lagrangian, coordinate, resolvedOrder) for coordinate in coords
-    ]
+
+    if resolvedOrder <= 1:
+        residual = list(EulerLagrangeEqn(lagrangian, list(coords), list(vels)))
+    else:
+        residual = [
+            eulerLagrangeExpression(lagrangian, coordinate, resolvedOrder) for coordinate in coords
+        ]
     return [_reduceToZero(component) for component in residual]
 
 

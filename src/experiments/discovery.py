@@ -8,48 +8,62 @@ from finding_L.main_streaming import runDiscoveryStreaming
 from finding_L.report import stateExpressionToFunctional
 from generation.eqnofmotion import defineCoordinates
 
-# The one system tolerances are allowed to be calibrated against. Everything else
-# is a blind holdout.
-CALIBRATION_SYSTEM = "isotropic_quartic_calibration"
+# The system the recovery pipeline was originally shaped around. NOTHING is
+# calibrated against it here -- no tuning search is run. It is only the reference
+# point that the blind holdout (any other system) is contrasted with, and the
+# "calibration" in its name is historical (it is the dataset stem too).
+REFERENCE_SYSTEM = "isotropic_quartic_calibration"
 
-# --- Locked tolerances ------------------------------------------------------
-# These knobs were calibrated once, on the ISOTROPIC_QUARTIC calibration system,
-# and are then FROZEN. Every other system (currently only ANHARMONIC_CHAIN) is a
-# blind holdout: it is scored with exactly these values and no per-system
-# retuning. That discipline is what makes the holdout result meaningful, so
-# runSystemDiscovery(..., enforceLocked=True) refuses to run a non-calibration
-# system whose PhysicalSystem overrides any locked value, and threads these
-# values explicitly into runDiscoveryStreaming rather than relying on the
-# per-system dataclass fields.
-LOCKED_TOLERANCES = {
-    # forward-selection stall cutoff (finding_L/stopping_conditions.checkCorrelationCutoff)
+# --- Frozen tolerances -----------------------------------------------------
+# The library default tolerances, frozen verbatim as the SINGLE set used for
+# every system. These are NOT the output of a calibration / parameter search --
+# they are the defaults that already ship in finding_L, written out here so the
+# value reported as "the tolerance" is provably the value the pipeline uses.
+#
+# Every entry is threaded explicitly into runDiscoveryStreaming (below), so
+# changing a value here changes behaviour; none of them fall back to a function
+# default. PhysicalSystem carries no tolerance fields -- the holdout cannot
+# diverge.
+#
+#   key                    source (file / function / default)
+#   ---------------------  --------------------------------------------------------------
+#   correlationCutoff      finding_L/stopping_conditions.py checkCorrelationCutoff  (0.1)
+#   residualRmsTolerance   finding_L/gram_forward_select.py checkResidualToleranceFromGram  (0.01)
+#   pruneRelativeThreshold finding_L/gram_forward_select.py pruneNearZeroCoefficients  (1e-2)
+#   stagnationTolerance    finding_L/stopping_conditions.py checkResidualStagnation  (0.01)
+#   stagnationPatience     finding_L/stopping_conditions.py checkResidualStagnation  (3)
+#   degreeCap              max monomial degree the library may expand to. 4 == the degree
+#                          of both benchmark Lagrangians (quartic); this is the value the
+#                          sweep has always used. The checkDegreeExpansionNeeded signature
+#                          default (6) is only a generic-API fallback and is never used here.
+FROZEN_TOLERANCES = {
     "correlationCutoff": stopping_conditions.checkCorrelationCutoff.__defaults__[0],
-    # RMS residual convergence (finding_L/gram_forward_select.checkResidualToleranceFromGram)
     "residualRmsTolerance": gram_forward_select.checkResidualToleranceFromGram.__defaults__[0],
-    # relative drop threshold in pruneNearZeroCoefficients (finding_L/gram_forward_select)
     "pruneRelativeThreshold": gram_forward_select.pruneNearZeroCoefficients.__defaults__[0],
-    # residual-stagnation stop (finding_L/stopping_conditions.checkResidualStagnation)
     "stagnationTolerance": stopping_conditions.checkResidualStagnation.__defaults__[0],
     "stagnationPatience": stopping_conditions.checkResidualStagnation.__defaults__[1],
-    # library degree ceiling -- structural (both benchmark systems are quartic)
     "degreeCap": 4,
 }
 
 
-def _assertNoToleranceOverride(system):
-    violations = []
-    if system.residualRmsTolerance != LOCKED_TOLERANCES["residualRmsTolerance"]:
-        violations.append(
-            f"residualRmsTolerance={system.residualRmsTolerance} "
-            f"!= locked {LOCKED_TOLERANCES['residualRmsTolerance']}"
-        )
-    if system.degreeCap != LOCKED_TOLERANCES["degreeCap"]:
-        violations.append(f"degreeCap={system.degreeCap} != locked {LOCKED_TOLERANCES['degreeCap']}")
-    if violations:
-        raise ValueError(
-            f"holdout discipline violation: system '{system.name}' overrides locked tolerances "
-            f"({'; '.join(violations)}). Recalibrate on '{CALIBRATION_SYSTEM}' or drop the override."
-        )
+def lockedDiscoveryTolerances(system=None):
+    """The exact tolerance kwargs runSystemDiscovery feeds the pipeline.
+
+    `system` is accepted and ignored: the point is that the frozen set does not
+    depend on which system is being run, so `lockedDiscoveryTolerances(a) ==
+    lockedDiscoveryTolerances(b)` for any two systems.
+    """
+    return dict(FROZEN_TOLERANCES)
+
+
+def frozenTolerancesReport():
+    lines = [
+        "Frozen tolerances (finding_L library defaults, identical for every system; "
+        "no tuning search was run):"
+    ]
+    for name, value in FROZEN_TOLERANCES.items():
+        lines.append(f"  {name:>22} = {value}")
+    return "\n".join(lines)
 
 
 @dataclass
@@ -138,57 +152,39 @@ def compareToExpected(
     )
 
 
-def runSystemDiscovery(system, csvPath, chunkRows=200_000, enforceLocked=True):
-    """Run streaming discovery on `system`.
+def runSystemDiscovery(system, csvPath, chunkRows=200_000):
+    """Run streaming discovery on `system` with the frozen tolerance set.
 
-    With enforceLocked=True (the default), every tolerance comes from
-    LOCKED_TOLERANCES -- calibrated on CALIBRATION_SYSTEM -- and a non-calibration
-    system that tries to override one raises. Only structural choices
-    (noCoords, startingMaxDegree, maxRounds) are taken from the PhysicalSystem.
+    Every tolerance comes from FROZEN_TOLERANCES; only search budgets
+    (noCoords, startingMaxDegree, maxRounds) come from the PhysicalSystem.
+
+    Returns (discovered, logFrame, tolerancesUsed). `tolerancesUsed` is the exact
+    dict passed to the pipeline, so a caller can assert the holdout ran on the
+    same set as the reference system.
     """
-    if enforceLocked and system.name != CALIBRATION_SYSTEM:
-        _assertNoToleranceOverride(system)
+    tolerances = lockedDiscoveryTolerances(system)
+    # Provably identical to the frozen set for any system:
+    assert tolerances == FROZEN_TOLERANCES, "discovery tolerances diverged from FROZEN_TOLERANCES"
 
-    if enforceLocked:
-        degreeCap = LOCKED_TOLERANCES["degreeCap"]
-        residualRmsTolerance = LOCKED_TOLERANCES["residualRmsTolerance"]
-        correlationCutoff = LOCKED_TOLERANCES["correlationCutoff"]
-        stagnationTolerance = LOCKED_TOLERANCES["stagnationTolerance"]
-        stagnationPatience = LOCKED_TOLERANCES["stagnationPatience"]
-    else:
-        degreeCap = system.degreeCap
-        residualRmsTolerance = system.residualRmsTolerance
-        correlationCutoff = stopping_conditions.checkCorrelationCutoff.__defaults__[0]
-        stagnationTolerance = stopping_conditions.checkResidualStagnation.__defaults__[0]
-        stagnationPatience = stopping_conditions.checkResidualStagnation.__defaults__[1]
-
-    return runDiscoveryStreaming(
+    discovered, logFrame = runDiscoveryStreaming(
         csvPath,
         noCoords=system.noCoords,
-        startingMaxDegree=system.startingMaxDegree,
-        maxRounds=system.maxRounds,
+        startingMaxDegree=system.startingMaxDegree,   # search budget
+        maxRounds=system.maxRounds,                    # search budget
         chunkRows=chunkRows,
-        degreeCap=degreeCap,
-        residualRmsTolerance=residualRmsTolerance,
-        correlationCutoff=correlationCutoff,
-        stagnationTolerance=stagnationTolerance,
-        stagnationPatience=stagnationPatience,
+        degreeCap=tolerances["degreeCap"],
+        residualRmsTolerance=tolerances["residualRmsTolerance"],
+        correlationCutoff=tolerances["correlationCutoff"],
+        stagnationTolerance=tolerances["stagnationTolerance"],
+        stagnationPatience=tolerances["stagnationPatience"],
+        pruneRelativeThreshold=tolerances["pruneRelativeThreshold"],
     )
-
-
-def lockedTolerancesReport():
-    """Human-readable banner of the frozen tolerances, for experiment output."""
-    lines = [
-        f"Locked tolerances (calibrated on '{CALIBRATION_SYSTEM}', frozen for all holdout systems):"
-    ]
-    for name, value in LOCKED_TOLERANCES.items():
-        lines.append(f"  {name:>22} = {value}")
-    return "\n".join(lines)
+    return discovered, logFrame, tolerances
 
 
 def formatComparison(comparison, discovered):
     lines = []
-    lines.append(lockedTolerancesReport())
+    lines.append(frozenTolerancesReport())
     lines.append(f"Recovery success: {comparison.success}")
     lines.append(f"Max |coefficient error| on shared terms: {comparison.maxAbsoluteError:.4f}")
 

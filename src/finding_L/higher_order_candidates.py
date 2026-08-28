@@ -2,7 +2,6 @@ import itertools
 
 import numpy as np
 import sympy as sp
-
 from generation.ostrogradski import TIME, eulerLagrangeExpression
 
 

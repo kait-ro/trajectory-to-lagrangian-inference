@@ -1,151 +1,159 @@
 # LOGIC
 
-End-to-end walkthrough of how a trajectory CSV becomes a Lagrangian (and a
-ghost verdict). File references are `src/`-relative.
+How a trajectory CSV becomes a Lagrangian and a ghost verdict, and why each step
+is there. Paths are `src/`-relative. The forward-selection step has its own
+document, [`ForwardSelection.md`](ForwardSelection.md).
 
-## 0. Symbols and conventions
+## Symbol conventions
 
-`generation/eqnofmotion.py` defines the single global time symbol
-`TIME = Symbol("t")` and `defineCoordinates(n)` → `q_i(t)` functions and their
-first derivatives. Every other module imports `TIME` from here.
+`generation/eqnofmotion.py` owns the single time symbol `TIME = Symbol("t")` and
+`defineCoordinates(n)` → `q_i(t)` functions plus their first derivatives.
 
-Two symbol spaces are used and mapped back and forth in `finding_L/report.py`:
+Two symbol spaces, mapped in `finding_L/report.py`:
 
-- **functional** form — `q0(t)`, `Derivative(q0(t), t)` — used for all calculus
-  (Euler–Lagrange derivatives, total time derivatives).
-- **state** form — plain symbols `q0, v0, q1, v1, …` (and `s0, s1, s2, …` for
-  the higher-derivative track) — used for the numeric regression and the
-  readable output.
+- **functional** (`q0(t)`, `Derivative(q0(t), t)`) — used for all calculus
+  (Euler–Lagrange derivatives, total time derivatives). *Why:* differentiation
+  w.r.t. time and w.r.t. the coordinate only makes sense when the coordinate is a
+  function of `t`.
+- **state** (`q0, v0, …`; `s0, s1, s2, …` for the higher-derivative track) —
+  used for the numeric regression and the readable output. *Why:* the Gram
+  matrix is built by evaluating expressions on columns of data; plain symbols
+  lambdify cleanly and read well.
 
-## 1. Dataset generation
+## 1. Dataset generation — `experiments/generate_dataset.py`, `generation/`
 
-`experiments/systems.py` holds `PhysicalSystem` records: a symbolic Lagrangian
-builder, the expected scaled Lagrangian (kinetic coefficient normalised to 1),
-and integration parameters. `experiments/generate_dataset.py`:
+`experiments/systems.py` holds `PhysicalSystem` records (a symbolic Lagrangian
+builder, the expected scaled Lagrangian, integration parameters).
 
-1. `generation/integrator.GetAccelFunctions` derives `q̈_i = f(q, q̇)` by solving
-   the Euler–Lagrange system for the accelerations and lambdifying.
+1. `generation/integrator.GetAccelFunctions` solves the Euler–Lagrange system for
+   the accelerations `q̈_i = f(q, q̇)` and lambdifies them.
 2. `generation/generate_data.generateDatasetStreaming` integrates many seeded
-   random initial conditions with RK4, adds Gaussian noise scaled per-column by
-   `noisePercentage · std`, and streams rows to CSV
-   (`trajectory_id, t, q0, q0dot, q0ddot, …`).
+   random initial conditions with RK4, adds Gaussian noise scaled per column by
+   `noisePercentage · std`, and streams rows to CSV.
 
-## 2. Candidate library
+*Why symbolic-then-integrate:* the ground truth is a known `L`, so recovery can
+be scored exactly; the noise model is explicit and reproducible.
 
-`finding_L/candidates.buildCandidateLibrary(coords, vels, maxDegree)` — all
-monomials in `(q_i, q̇_i)` of total degree `1..maxDegree`, de-duplicated by
-exponent tuple. `filterPureVelocityTerms` drops monomials with no positional
-dependence (they contribute nothing to the EL residual structure being fit).
-The kinetic term `Σ q̇_i²` is appended explicitly and is the regression target.
+## 2. Candidate library — `finding_L/candidates.py`
 
-## 3. Streaming Gram matrix
+All monomials in `(q_i, q̇_i)` of total degree `1..maxDegree`, de-duplicated by
+exponent tuple; pure-velocity monomials are dropped (they add nothing to the EL
+residual structure). The kinetic term `Σ q̇_i²` is appended and is the regression
+target.
 
-`finding_L/build_matrix.py`. For each candidate monomial `θ`, its Euler–Lagrange
-column is `EL(θ) = d/dt ∂θ/∂q̇ − ∂θ/∂q`, with `q̈_i` substituted as an
-independent data symbol. These columns are lambdified once (cached across degree
-expansions via `lambdifiedCache`), then evaluated on the CSV in row chunks and
-sub-chunked to a cell budget so the dense `Θ` block never exceeds ~1 GB. The
-accumulators are the row count `n`, the column sums, and `G = Θᵀ Θ`.
+*Why a monomial library:* it turns "find a function" into "find sparse
+coefficients over a fixed basis" — a linear problem once the EL operator is
+applied.
 
-The regression is: find sparse `c` such that
-`EL(kinetic) + Σ_j c_j EL(θ_j) ≈ 0` on the data — i.e. the discovered `L`
-satisfies the observed equations of motion. Everything downstream needs only
-`G` and `b = −G[:, kinetic]`.
+## 3. Streaming Gram matrix — `finding_L/build_matrix.py`
 
-## 4. Forward selection
+For each candidate `θ`, its Euler–Lagrange column `EL(θ) = d/dt ∂θ/∂q̇ − ∂θ/∂q`
+is formed (with `q̈_i` substituted as an independent data symbol), lambdified
+once (cached across degree expansions), evaluated on the CSV in row chunks, and
+sub-chunked to a cell budget. The accumulators are the row count, the column
+sums, and `G = Θᵀ Θ`.
 
-`finding_L/main_streaming.runDiscoveryStreaming`. Each round:
+The model being fit: the discovered `L` must satisfy the observed equations of
+motion, i.e.
 
-1. Refit the active coefficients from the Gram sub-block
-   (`fitActiveCoefficientsFromGram`; `lstsq` fallback with a `RuntimeWarning`
-   if the block is singular).
-2. Compute the scaled residual `‖r‖ / ‖EL(kinetic)‖`.
-3. **Stop — Condition A** if the scaled residual is below
-   `residualRmsTolerance`.
-4. **Stop — Condition C** if the residual has improved by less than
-   `stagnationTolerance` for `stagnationPatience` consecutive rounds.
-5. Score every reserve candidate by its correlation with the current residual
-   (`scoreReserveCandidatesFromGram`) and take the best.
-6. If the best score is below `correlationCutoff`: try a degree expansion
-   (`checkDegreeExpansionNeeded`, capped at `degreeCap`); re-stream the Gram
-   matrix for the new columns and continue, or **stop — Condition B** if the
-   cap is reached.
-7. Otherwise add the best candidate to the active set.
+```
+EL(kinetic) + Σ_j c_j · EL(θ_j) ≈ 0     over all data rows
+```
 
-After the loop, `pruneNearZeroCoefficients` iteratively drops active terms whose
-coefficient is below `pruneRelativeThreshold · max|c|` and refits.
+*Why streaming:* the dense `Θ` for a degree-4 expansion on 6 DOF is ~23 GB.
+`G` is `n_candidates × n_candidates` and everything downstream needs only `G` and
+`b = −G[:, kinetic]`.
 
-See `ForwardSelection.md` for the scoring formula and the tolerance lock.
+## 4. Forward selection — `finding_L/main_streaming.py` + `gram_forward_select.py`
 
-## 5. Readable report
+Greedy, OMP-style: each round add the reserve candidate most correlated with the
+current residual, refit the active coefficients from the Gram sub-block, and stop
+on one of three conditions (A converged / B stalled at the degree cap / C
+residual stagnated). The library degree is expanded on demand up to `degreeCap`.
+Afterwards `pruneNearZeroCoefficients` drops active terms below a relative
+threshold and refits.
 
-`finding_L/report.assembleDiscoveredLagrangian` produces `DiscoveredLagrangian`:
+*Why greedy:* the full best-subset problem is combinatorial; greedy forward
+selection with a correlation score is cheap and, in the clean-data regime,
+exact. Its failure mode under noise is documented in
+[`PROJECT.md`](PROJECT.md#a-the-12--measurement-noise-ceiling-is-structural-not-a-tolerance-bug).
 
-- `rawExpression` — state-symbol Lagrangian with the raw fitted floats.
-- `expression` — coefficients snapped to the nearest small-denominator rational
-  within 1 % relative (`snapCoefficient`), zeros dropped.
-- `text` — terms grouped by degree and shared coefficient, plus a
-  `raw -> clean` snapping table.
+Full algorithm, scoring formula, stopping conditions and the tolerance table:
+[`ForwardSelection.md`](ForwardSelection.md).
 
-## 6. Equivalence-class check
+## 5. Readable report — `finding_L/report.py`
 
-`finding_L/equivalence_class.classifyLagrangianPair(A, B, coords, vels,
-order=None)`:
+`assembleDiscoveredLagrangian` → `DiscoveredLagrangian(expression, rawExpression,
+…, text)`: `rawExpression` keeps the fitted floats; `expression` snaps each
+coefficient to the nearest small-denominator rational within 1 % relative;
+`text` groups terms by degree and shared coefficient.
 
-1. `ΔL = expand(A − B)`. If `ΔL == 0` → identical.
-2. `isNullLagrangian(ΔL, …)` applies the full Ostrogradski Euler–Lagrange
-   operator (order resolved from the highest derivative present, so this works
-   for higher-derivative `L` too) and checks every component reduces to `0`
-   (`expand`, then `simplify`).
+*Why snapping:* physical Lagrangians have simple rational coefficients; snapping
+turns `-0.24999` into `-1/4` and makes the equivalence check below exact rather
+than approximate.
+
+## 6. Equivalence-class check — `finding_L/equivalence_class.py`
+
+`classifyLagrangianPair(A, B, coords, vels, order=None)`:
+
+1. `ΔL = expand(A − B)`. `ΔL == 0` → identical.
+2. `isNullLagrangian(ΔL)` applies the Euler–Lagrange operator and checks every
+   component reduces to `0` (`expand`, then `simplify`). **Order-aware:** order 1
+   uses the ordinary EL operator (`generation.eqnofmotion.EulerLagrangeEqn`);
+   order ≥ 2 uses the full Ostrogradski operator
+   (`generation.ostrogradski.eulerLagrangeExpression`). Order defaults to the
+   highest derivative present.
 3. If null and first-order, `reconstructBoundaryPotential` recovers `F` with
-   `ΔL = dF/dt` by integrating the velocity coefficients (curl-free check first).
+   `ΔL = dF/dt` (curl-free check, then integrate the velocity coefficients).
 
-The verdict (`EquivalenceVerdict`: `equivalent`, `difference`,
-`eulerLagrangeResidual`, `boundaryPotential`, `detail`) is:
+Verdict: **equivalent** if `ΔL == 0` or `ΔL` is a nonzero null Lagrangian (same
+physics, differ by a total time derivative); **not equivalent** if `ΔL` has a
+nonzero EL residual (different equations of motion).
 
-- **equivalent** — `ΔL == 0` (exact structural match) or `ΔL` is a nonzero null
-  Lagrangian (differ only by a total time derivative — the same physics).
-- **not equivalent** — `ΔL` has a nonzero Euler–Lagrange residual: the two
-  Lagrangians produce different equations of motion, so accepting both as "the
-  same" would mean the acceptance tolerances are too loose.
+*Why not just compare coefficients:* two Lagrangians can differ by `d/dt F` and
+be physically identical (e.g. `q q̈` vs `−q̇²`), and two Lagrangians with the same
+monomials but slightly-off coefficients are *not* the same theory. Coefficient
+proximity answers neither question; the EL operator answers both.
 
-`experiments/discovery.compareToExpected` runs this on every
-discovered-vs-expected comparison and returns it on `RecoveryComparison`
-(`.equivalenceVerdict`, `.structurallyEquivalent`);
-`experiments/noise_robustness_sweep.py` surfaces it as the `equiv?` column
-(`exact` / `null-L` / `no`). The higher-derivative validation studies
-(`higher_order_discovery_validation.py`, `jerk_snap_distractor_study.py`) call
-`isNullLagrangian` directly instead of an ad-hoc inline check.
+Wiring: `experiments/discovery.compareToExpected` runs it on every
+discovered-vs-expected pair; `noise_robustness_sweep.py` shows the verdict per
+noise level; `higher_order_discovery_validation.py` and
+`jerk_snap_distractor_study.py` call `isNullLagrangian` directly.
 
-## 7. Higher-derivative track
+## 7. Higher-derivative track — `finding_L/higher_order_*.py`, `generation/ostrogradski*.py`
 
-Same shape as steps 2–5 but single-coordinate and with an explicit Lagrangian
-order:
+Same shape as steps 2–5, single-coordinate, with an explicit Lagrangian order:
 
-- `finding_L/higher_order_candidates.py` — library of monomials in
-  `(q, q', q'', …)` state symbols; each candidate's EL column is built with the
-  full Ostrogradski operator and evaluated on derivative arrays. A narrow
-  cosine-similarity filter (`dropKineticAliasColumns`) removes columns collinear
-  with the kinetic column (the exact `q''² ↔ q' q'''` alias).
-- `finding_L/higher_order_discovery.recoverHigherOrderLagrangian` — dense Gram
-  matrix, `forwardSelectFromGram`, coefficient snapping.
+- `higher_order_candidates.py` — monomials in `(q, q', q'', …)`; each candidate's
+  EL column uses the full Ostrogradski operator. `dropKineticAliasColumns`
+  removes columns collinear with the kinetic column (the exact
+  `q''² ↔ q' q'''` alias).
+- `higher_order_discovery.recoverHigherOrderLagrangian` — dense Gram matrix,
+  `forwardSelectFromGram`, coefficient snapping.
 
-Noisy derivatives come from `generation/numerical_diff.py` — the smoothing
+Noisy derivatives come from `generation/numerical_diff.py`; the quintic smoothing
 spline is the only method that survives to 3rd/4th order.
 
-## 8. Ghost detection
+*Why single-coordinate for now:* the candidate-library and EL-column code is not
+yet generalised to multiple coupled higher-derivative fields (roadmap item 10).
 
-`generation/ghost_detection.detectGhost`:
+## 8. Ghost detection — `generation/ghost_detection.py`
 
 1. Build the Ostrogradski Hamiltonian `H` (`ostrogradski_hamiltonian.py`).
-2. If `H` is quadratic in the phase-space variables, take the Hessian and count
+   Raises `NonUniqueTopDerivativeError` if `L` is nonlinear in its highest
+   derivative (the Legendre transform is then multi-valued and the physical
+   branch is a caller decision).
+2. If `H` is quadratic in the phase-space variables, take its Hessian and count
    negative eigenvalues; otherwise report "needs nonlinear boundedness
    analysis".
-3. Compute the EOM characteristic roots and classify the dynamics
-   (oscillatory / runaway / damped).
+3. Compute the EOM characteristic roots; classify the dynamics (oscillatory /
+   runaway / damped).
 4. **Ghost** iff `H` is indefinite *and* the dynamics are oscillatory — a
-   bounded-motion negative-energy mode, the Ostrogradski signature. An
-   indefinite `H` with runaway dynamics is a tachyon/instability, not a ghost.
+   bounded-motion negative-energy mode, the Ostrogradski signature. Indefinite
+   `H` with runaway dynamics is a tachyon, not a ghost.
 
-The verdict is invariant under the equivalence-class freedom: PU and
-PU + a total derivative both return `ghost = True`.
+*Why the two-part test:* the Ostrogradski theorem guarantees a linear-in-momentum
+term in `H` for a non-degenerate higher-derivative theory, which makes `H`
+unbounded below; the oscillatory-dynamics condition rules out the trivial
+unbounded-but-harmless runaway case. The verdict is invariant under the
+total-derivative freedom from step 6.

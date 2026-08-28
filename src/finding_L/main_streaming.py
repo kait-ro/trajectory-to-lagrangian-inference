@@ -43,6 +43,7 @@ def runDiscoveryStreaming(
     stagnationTolerance: float = 0.01,
     stagnationPatience: int = 3,
     correlationCutoff: float = 0.1,
+    pruneRelativeThreshold: float = 1e-2,
 ):
     t, coords, vels = defineCoordinates(noCoords)
     kineticTerm = sp.expand(sum(v ** 2 for v in vels))
@@ -126,7 +127,9 @@ def runDiscoveryStreaming(
         activeIndices.append(bestReserveIndex)
         reserveIndices = [index for index in reserveIndices if index != bestReserveIndex]
 
-    activeIndices, finalCoefficients = pruneNearZeroCoefficients(G, b, activeIndices)
+    activeIndices, finalCoefficients = pruneNearZeroCoefficients(
+        G, b, activeIndices, threshold=pruneRelativeThreshold
+    )
     discoveredTerms = [(candidateTerms[index], coefficient) for index, coefficient in zip(activeIndices, finalCoefficients)]
 
     discovered = assembleDiscoveredLagrangian(kineticTerm, discoveredTerms, coords, vels)

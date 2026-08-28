@@ -8,14 +8,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from experiments.discovery import (
-    CALIBRATION_SYSTEM,
-    LOCKED_TOLERANCES,
+    FROZEN_TOLERANCES,
+    REFERENCE_SYSTEM,
     compareToExpected,
-    lockedTolerancesReport,
+    frozenTolerancesReport,
     runSystemDiscovery,
 )
 from experiments.generate_dataset import datasetPath, generateSystemDatasets
 from experiments.systems import SYSTEMS
+from finding_L.equivalence_class import formatVerdict
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
@@ -29,7 +30,7 @@ def _finalScaledResidual(logFrame):
 def runNoiseCurve(systemName, noiseLevels=None, chunkRows=150_000):
     system = SYSTEMS[systemName]
     levels = list(system.noiseLevels if noiseLevels is None else noiseLevels)
-    isHoldout = system.name != CALIBRATION_SYSTEM
+    isHoldout = system.name != REFERENCE_SYSTEM
 
     generateSystemDatasets(systemName, levels)
     expected = system.expectedScaledLagrangian(system.noCoords)
@@ -37,9 +38,14 @@ def runNoiseCurve(systemName, noiseLevels=None, chunkRows=150_000):
     rows = []
     for noiseLevel in levels:
         csvPath = datasetPath(system, noiseLevel)
-        # enforceLocked=True (default): the holdout runs on the tolerances frozen
-        # from CALIBRATION_SYSTEM, and raises if this system overrode any of them.
-        discovered, logFrame = runSystemDiscovery(system, csvPath, chunkRows=chunkRows)
+        discovered, logFrame, tolerancesUsed = runSystemDiscovery(system, csvPath, chunkRows=chunkRows)
+        # Provably the same frozen set the reference system runs on -- no
+        # per-system retuning is even representable (PhysicalSystem has no
+        # tolerance fields).
+        assert tolerancesUsed == FROZEN_TOLERANCES, (
+            f"{system.name} at noise {noiseLevel} ran on {tolerancesUsed}, "
+            f"not the frozen set {FROZEN_TOLERANCES}"
+        )
         comparison = compareToExpected(discovered, expected, noCoords=system.noCoords)
         verdict = comparison.equivalenceVerdict
         rows.append(
@@ -48,6 +54,7 @@ def runNoiseCurve(systemName, noiseLevels=None, chunkRows=150_000):
                 "success": comparison.success,
                 "structurallyEquivalent": bool(comparison.structurallyEquivalent),
                 "equivalenceDetail": verdict.detail if verdict is not None else "",
+                "equivalenceVerdictText": formatVerdict(verdict) if verdict is not None else "",
                 "missingCount": len(comparison.missingMonomials),
                 "spuriousCount": len(comparison.spuriousMonomials),
                 "maxAbsoluteCoefficientError": comparison.maxAbsoluteError,
@@ -73,17 +80,17 @@ def writeArtifacts(system, rows, isHoldout):
     stem = os.path.join(RESULTS_DIR, f"noise_curve_{system.name}")
 
     roleLine = (
-        "ROLE: BLIND HOLDOUT -- tolerances frozen from the calibration system, no retuning"
+        "ROLE: BLIND HOLDOUT -- scored with the frozen default tolerances, no per-system retuning"
         if isHoldout
-        else "ROLE: CALIBRATION SYSTEM -- tolerances were fit here, then locked"
+        else f"ROLE: REFERENCE SYSTEM ('{REFERENCE_SYSTEM}') -- same frozen default tolerances as every other system"
     )
 
     with open(f"{stem}.json", "w") as handle:
         json.dump(
             {
                 "system": system.name,
-                "role": "holdout" if isHoldout else "calibration",
-                "lockedTolerances": LOCKED_TOLERANCES,
+                "role": "holdout" if isHoldout else "reference",
+                "frozenTolerances": FROZEN_TOLERANCES,
                 "rows": rows,
             },
             handle,
@@ -99,7 +106,7 @@ def writeArtifacts(system, rows, isHoldout):
         system.description,
         "",
         roleLine,
-        lockedTolerancesReport(),
+        frozenTolerancesReport(),
         "",
         "equiv? = is (discovered - expected) a genuine null Lagrangian (EL operator identically zero)",
         "",
@@ -118,6 +125,19 @@ def writeArtifacts(system, rows, isHoldout):
             f"{row['spuriousCount']:>9} {row['maxAbsoluteCoefficientError']:>11.4f} "
             f"{row['finalScaledResidual']:>11.4f} {equivCell:>8}"
         )
+
+    # Per-level equivalence-class verdict. Compact here (the full EquivalenceVerdict
+    # text -- dL and its EL residual -- is in the .json under equivalenceVerdictText).
+    lines.append("")
+    lines.append("Equivalence-class verdict per noise level (discovered - expected):")
+    for row in rows:
+        if not row["structurallyEquivalent"]:
+            state = "NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct"
+        elif "identical" in row["equivalenceDetail"]:
+            state = "equivalent -- dL == 0 (exact structural match)"
+        else:
+            state = "equivalent -- dL is a nonzero null Lagrangian (total-derivative)"
+        lines.append(f"  [{row['noiseLevel']*100:g}% noise] {state}")
     tableText = "\n".join(lines)
     with open(f"{stem}.txt", "w") as handle:
         handle.write(tableText + "\n")

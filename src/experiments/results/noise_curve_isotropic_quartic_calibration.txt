@@ -1,8 +1,8 @@
 isotropic_quartic_calibration
 Isotropic quartic oscillator L = m/2 v^2 - k/2 r^2 - eps/4 (r^2)^2. Calibration system.
 
-ROLE: CALIBRATION SYSTEM -- tolerances were fit here, then locked
-Locked tolerances (calibrated on 'isotropic_quartic_calibration', frozen for all holdout systems):
+ROLE: REFERENCE SYSTEM ('isotropic_quartic_calibration') -- same frozen default tolerances as every other system
+Frozen tolerances (finding_L library defaults, identical for every system; no tuning search was run):
        correlationCutoff = 0.1
     residualRmsTolerance = 0.01
   pruneRelativeThreshold = 0.01
@@ -15,3 +15,24 @@ equiv? = is (discovered - expected) a genuine null Lagrangian (EL operator ident
   noise    outcome  missing  spurious  max|dcoef|  finalResid   equiv?
 ----------------------------------------------------------------------
      0%  recovered        0         0      0.0000      0.0113    exact
+     1%  recovered        0         0      0.0006      0.0153    exact
+     2%     failed        7        19      0.2607      0.0452       no
+
+Equivalence-class verdict per noise level:
+  [0% noise]
+    Equivalent: True
+    Candidate difference dL = 0
+    Euler-Lagrange residual of dL: [0, 0, 0, 0, 0, 0]
+    dL = d/dt F  with  F = 0
+    candidates are identical
+  [1% noise]
+    Equivalent: True
+    Candidate difference dL = 0
+    Euler-Lagrange residual of dL: [0, 0, 0, 0, 0, 0]
+    dL = d/dt F  with  F = 0
+    candidates are identical
+  [2% noise]
+    Equivalent: False
+    Candidate difference dL = 3*q0(t)**4/20 + 0.070355*q0(t)**2*q1(t)**2 + 3*q0(t)**2*q2(t)**2/10 + q0(t)**2*q3(t)**2/20 + 0.058147*q0(t)**2*q4(t)**2 + 3*q0(t)**2*q5(t)**2/10 - 0.106702*q0(t)**2*Derivative(q0(t), t)**2 - q0(t)**2*Derivative(q2(t), t)**2/30 - 0.035956*q0(t)**2*Derivative(q5(t), t)**2 - q0(t)**2/4 - q0(t)*q1(t)*Derivative(q0(t), t)*Derivative(q1(t), t)/40 - 0.158093*q0(t)*q2(t)*Derivative(q0(t), t)*Derivative(q2(t), t) - 0.017602*q0(t)*q3(t)*Derivative(q0(t), t)*Derivative(q3(t), t) - 0.017459*q0(t)*q4(t)*Derivative(q0(t), t)*Derivative(q4(t), t) - 5*q0(t)*q5(t)*Derivative(q0(t), t)*Derivative(q5(t), t)/32 + 3*q1(t)**4/20 + q1(t)**2*q2(t)**2/20 + 0.014922*q1(t)**2*q3(t)**2 + 3*q1(t)**2*q4(t)**2/160 + 3*q1(t)**2*q5(t)**2/160 - 0.112889*q1(t)**2*Derivative(q1(t), t)**2 - 3*q1(t)**2/20 - 0.018773*q1(t)*q2(t)*Derivative(q1(t), t)*Derivative(q2(t), t) + 3*q2(t)**4/20 + q2(t)**2*q3(t)**2/20 + 0.03683*q2(t)**2*q4(t)**2 + q2(t)**2*q5(t)**2/30 - q2(t)**2*Derivative(q0(t), t)**2/40 - 0.109115*q2(t)**2*Derivative(q2(t), t)**2 - q2(t)**2/5 - 0.021569*q2(t)*q3(t)*Derivative(q2(t), t)*Derivative(q3(t), t) + 0.004801*q3(t)**4 + q3(t)**2*q4(t)**2/30 + 0.042647*q3(t)**2*q5(t)**2 - q3(t)**2/16 - 0.016158*q3(t)*q4(t)*Derivative(q3(t), t)*Derivative(q4(t), t) - 0.015171*q3(t)*q5(t)*Derivative(q3(t), t)*Derivative(q5(t), t) + 3*q4(t)**4/20 + 0.044121*q4(t)**2*q5(t)**2 - 0.113679*q4(t)**2*Derivative(q4(t), t)**2 - q4(t)**2/6 - 0.015656*q4(t)*q5(t)*Derivative(q4(t), t)*Derivative(q5(t), t) + 3*q5(t)**4/20 - q5(t)**2*Derivative(q0(t), t)**2/32 - 0.11415*q5(t)**2*Derivative(q5(t), t)**2 - q5(t)**2/5
+    Euler-Lagrange residual of dL: [-0.6*q0(t)**3 - 0.213404*q0(t)**2*Derivative(q0(t), (t, 2)) - 0.14071*q0(t)*q1(t)**2 - 0.025*q0(t)*q1(t)*Derivative(q1(t), (t, 2)) - 0.6*q0(t)*q2(t)**2 - 0.158093*q0(t)*q2(t)*Derivative(q2(t), (t, 2)) - 0.1*q0(t)*q3(t)**2 - 0.017602*q0(t)*q3(t)*Derivative(q3(t), (t, 2)) - 0.116294*q0(t)*q4(t)**2 - 0.017459*q0(t)*q4(t)*Derivative(q4(t), (t, 2)) - 0.6*q0(t)*q5(t)**2 - 0.15625*q0(t)*q5(t)*Derivative(q5(t), (t, 2)) - 0.213404*q0(t)*Derivative(q0(t), t)**2 - 0.025*q0(t)*Derivative(q1(t), t)**2 - 0.0914263333333333*q0(t)*Derivative(q2(t), t)**2 - 0.017602*q0(t)*Derivative(q3(t), t)**2 - 0.017459*q0(t)*Derivative(q4(t), t)**2 - 0.084338*q0(t)*Derivative(q5(t), t)**2 + 0.5*q0(t) - 0.05*q2(t)**2*Derivative(q0(t), (t, 2)) - 0.1*q2(t)*Derivative(q0(t), t)*Derivative(q2(t), t) - 0.0625*q5(t)**2*Derivative(q0(t), (t, 2)) - 0.125*q5(t)*Derivative(q0(t), t)*Derivative(q5(t), t), (-0.14071*q0(t)**2 - 0.025*q0(t)*Derivative(q0(t), (t, 2)) - 0.6*q1(t)**2 - 0.225778*q1(t)*Derivative(q1(t), (t, 2)) - 0.1*q2(t)**2 - 0.018773*q2(t)*Derivative(q2(t), (t, 2)) - 0.029844*q3(t)**2 - 0.0375*q4(t)**2 - 0.0375*q5(t)**2 - 0.025*Derivative(q0(t), t)**2 - 0.225778*Derivative(q1(t), t)**2 - 0.018773*Derivative(q2(t), t)**2 + 0.3)*q1(t), -0.6*q0(t)**2*q2(t) - 0.0666666666666667*q0(t)**2*Derivative(q2(t), (t, 2)) - 0.158093*q0(t)*q2(t)*Derivative(q0(t), (t, 2)) - 0.133333333333333*q0(t)*Derivative(q0(t), t)*Derivative(q2(t), t) - 0.1*q1(t)**2*q2(t) - 0.018773*q1(t)*q2(t)*Derivative(q1(t), (t, 2)) - 0.6*q2(t)**3 - 0.21823*q2(t)**2*Derivative(q2(t), (t, 2)) - 0.1*q2(t)*q3(t)**2 - 0.021569*q2(t)*q3(t)*Derivative(q3(t), (t, 2)) - 0.0736599999999999*q2(t)*q4(t)**2 - 0.0666666666666667*q2(t)*q5(t)**2 - 0.108093*q2(t)*Derivative(q0(t), t)**2 - 0.018773*q2(t)*Derivative(q1(t), t)**2 - 0.21823*q2(t)*Derivative(q2(t), t)**2 - 0.021569*q2(t)*Derivative(q3(t), t)**2 + 0.4*q2(t), (-0.1*q0(t)**2 - 0.017602*q0(t)*Derivative(q0(t), (t, 2)) - 0.029844*q1(t)**2 - 0.1*q2(t)**2 - 0.021569*q2(t)*Derivative(q2(t), (t, 2)) - 0.019204*q3(t)**2 - 0.0666666666666667*q4(t)**2 - 0.016158*q4(t)*Derivative(q4(t), (t, 2)) - 0.085294*q5(t)**2 - 0.015171*q5(t)*Derivative(q5(t), (t, 2)) - 0.017602*Derivative(q0(t), t)**2 - 0.021569*Derivative(q2(t), t)**2 - 0.016158*Derivative(q4(t), t)**2 - 0.015171*Derivative(q5(t), t)**2 + 0.125)*q3(t), (-0.116294*q0(t)**2 - 0.017459*q0(t)*Derivative(q0(t), (t, 2)) - 0.0375*q1(t)**2 - 0.0736599999999999*q2(t)**2 - 0.0666666666666667*q3(t)**2 - 0.016158*q3(t)*Derivative(q3(t), (t, 2)) - 0.6*q4(t)**2 - 0.227358*q4(t)*Derivative(q4(t), (t, 2)) - 0.0882419999999999*q5(t)**2 - 0.015656*q5(t)*Derivative(q5(t), (t, 2)) - 0.017459*Derivative(q0(t), t)**2 - 0.016158*Derivative(q3(t), t)**2 - 0.227358*Derivative(q4(t), t)**2 - 0.015656*Derivative(q5(t), t)**2 + 0.333333333333333)*q4(t), -0.6*q0(t)**2*q5(t) - 0.071912*q0(t)**2*Derivative(q5(t), (t, 2)) - 0.15625*q0(t)*q5(t)*Derivative(q0(t), (t, 2)) - 0.143824*q0(t)*Derivative(q0(t), t)*Derivative(q5(t), t) - 0.0375*q1(t)**2*q5(t) - 0.0666666666666667*q2(t)**2*q5(t) - 0.085294*q3(t)**2*q5(t) - 0.015171*q3(t)*q5(t)*Derivative(q3(t), (t, 2)) - 0.0882419999999999*q4(t)**2*q5(t) - 0.015656*q4(t)*q5(t)*Derivative(q4(t), (t, 2)) - 0.6*q5(t)**3 - 0.2283*q5(t)**2*Derivative(q5(t), (t, 2)) - 0.09375*q5(t)*Derivative(q0(t), t)**2 - 0.015171*q5(t)*Derivative(q3(t), t)**2 - 0.015656*q5(t)*Derivative(q4(t), t)**2 - 0.2283*q5(t)*Derivative(q5(t), t)**2 + 0.4*q5(t)]
+    difference produces nonzero equations of motion: the two candidates are physically distinct, so acceptance of both reflects tolerances that are too loose, not a real degeneracy
