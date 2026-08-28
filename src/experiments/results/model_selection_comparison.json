@@ -1,0 +1,198 @@
+{
+  "isotropic_quartic_calibration": [
+    {
+      "noiseLevel": 0.0,
+      "greedy": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 3.1086244689504383e-15,
+        "structurallyEquivalent": true
+      },
+      "stlsq": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 4.574118861455645e-14,
+        "structurallyEquivalent": true
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 4.574118861455645e-14,
+        "structurallyEquivalent": true
+      }
+    },
+    {
+      "noiseLevel": 0.01,
+      "greedy": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0006440821137960739,
+        "structurallyEquivalent": true
+      },
+      "stlsq": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0006440821138031794,
+        "structurallyEquivalent": true
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0006440821138031794,
+        "structurallyEquivalent": true
+      }
+    },
+    {
+      "noiseLevel": 0.02,
+      "greedy": {
+        "success": false,
+        "missing": 7,
+        "spurious": 19,
+        "maxAbsError": 0.2607048892987165,
+        "structurallyEquivalent": false
+      },
+      "stlsq": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0027568060789446847,
+        "structurallyEquivalent": false
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0027568060789446847,
+        "structurallyEquivalent": false
+      }
+    },
+    {
+      "noiseLevel": 0.05,
+      "greedy": {
+        "success": false,
+        "missing": 19,
+        "spurious": 19,
+        "maxAbsError": 0.5054880660868881,
+        "structurallyEquivalent": false
+      },
+      "stlsq": {
+        "success": false,
+        "missing": 0,
+        "spurious": 11,
+        "maxAbsError": 0.08589413675321866,
+        "structurallyEquivalent": false
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.01753951240340279,
+        "structurallyEquivalent": false
+      }
+    }
+  ],
+  "anharmonic_chain_blind": [
+    {
+      "noiseLevel": 0.0,
+      "greedy": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 2.220446049250313e-15,
+        "structurallyEquivalent": true
+      },
+      "stlsq": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 3.6637359812630166e-15,
+        "structurallyEquivalent": true
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 3.6637359812630166e-15,
+        "structurallyEquivalent": true
+      }
+    },
+    {
+      "noiseLevel": 0.01,
+      "greedy": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0005292602750225361,
+        "structurallyEquivalent": false
+      },
+      "stlsq": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0005292602750210651,
+        "structurallyEquivalent": false
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0005292602750210651,
+        "structurallyEquivalent": false
+      }
+    },
+    {
+      "noiseLevel": 0.02,
+      "greedy": {
+        "success": false,
+        "missing": 6,
+        "spurious": 6,
+        "maxAbsError": 0.1387473993480527,
+        "structurallyEquivalent": false
+      },
+      "stlsq": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0020899731312429004,
+        "structurallyEquivalent": false
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.0020899731312429004,
+        "structurallyEquivalent": false
+      }
+    },
+    {
+      "noiseLevel": 0.05,
+      "greedy": {
+        "success": false,
+        "missing": 6,
+        "spurious": 6,
+        "maxAbsError": 0.13596712011137335,
+        "structurallyEquivalent": false
+      },
+      "stlsq": {
+        "success": false,
+        "missing": 0,
+        "spurious": 10,
+        "maxAbsError": 0.06276837915573692,
+        "structurallyEquivalent": false
+      },
+      "lasso": {
+        "success": true,
+        "missing": 0,
+        "spurious": 0,
+        "maxAbsError": 0.01260460685186085,
+        "structurallyEquivalent": false
+      }
+    }
+  ]
+}
