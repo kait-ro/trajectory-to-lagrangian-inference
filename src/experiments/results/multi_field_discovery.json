@@ -1,0 +1,34 @@
+[
+  {
+    "scenario": "ground_truth_2field",
+    "noFields": 2,
+    "trueCoupling2mu": 0.6,
+    "recoveredCrossFieldCoefficient": 0.5999999999999996,
+    "recovered": "4*s0_0**2 + 5*s0_0*s0_2 + 3*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + s1_2**2",
+    "equivalentUpToNullLagrangian": true
+  },
+  {
+    "scenario": "ground_truth_3field",
+    "noFields": 3,
+    "trueCoupling2mu": 0.4,
+    "recoveredCrossFieldCoefficient": 0.3999999999999998,
+    "recovered": "4*s0_0**2 + 5*s0_0*s0_2 + 2*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + 2*s1_0*s2_0/5 + s1_2**2 + 4*s2_0**2 + 5*s2_0*s2_2 + s2_2**2",
+    "equivalentUpToNullLagrangian": true
+  },
+  {
+    "scenario": "columns_perturbed_0.1pct_2field",
+    "noFields": 2,
+    "trueCoupling2mu": 0.6,
+    "recoveredCrossFieldCoefficient": 0.600008476109664,
+    "recovered": "4*s0_0**2 + 5*s0_0*s0_2 + 3*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + s1_2**2",
+    "equivalentUpToNullLagrangian": true
+  },
+  {
+    "scenario": "spline_from_0.03pct_positions_2field",
+    "noFields": 2,
+    "trueCoupling2mu": 0.6,
+    "recoveredCrossFieldCoefficient": 0.0,
+    "recovered": "282920*s0_0*s0_2 + s0_2**2 + 194041*s1_0*s1_2 + s1_2**2",
+    "equivalentUpToNullLagrangian": false
+  }
+]

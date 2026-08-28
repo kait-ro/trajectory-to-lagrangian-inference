@@ -1,0 +1,27 @@
+Multi-field higher-derivative Lagrangian recovery (coupled Pais-Uhlenbeck chain)
+
+[ground_truth_2field]  (2 fields)
+  recovered: 4*s0_0**2 + 5*s0_0*s0_2 + 3*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + s1_2**2
+  cross-field coupling coefficient: recovered +0.6000  true +0.6000
+  equivalence-class match to true chain: True
+
+[ground_truth_3field]  (3 fields)
+  recovered: 4*s0_0**2 + 5*s0_0*s0_2 + 2*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + 2*s1_0*s2_0/5 + s1_2**2 + 4*s2_0**2 + 5*s2_0*s2_2 + s2_2**2
+  cross-field coupling coefficient: recovered +0.4000  true +0.4000
+  equivalence-class match to true chain: True
+
+[columns_perturbed_0.1pct_2field]  (2 fields)
+  recovered: 4*s0_0**2 + 5*s0_0*s0_2 + 3*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + s1_2**2
+  cross-field coupling coefficient: recovered +0.6000  true +0.6000
+  equivalence-class match to true chain: True
+
+[spline_from_0.03pct_positions_2field]  (2 fields)
+  recovered: 282920*s0_0*s0_2 + s0_2**2 + 194041*s1_0*s1_2 + s1_2**2
+  cross-field coupling coefficient: recovered +0.0000  true +0.6000
+  equivalence-class match to true chain: False
+
+Ground truth and column-perturbed: exact recovery up to a total derivative, with the
+cross-field coupling term included -- the multi-coordinate recovery itself is sound.
+The spline-from-noisy-positions path fails: multi-field higher-order differentiation
+is much harder than single-field (each EL column mixes several fields' derivative
+levels). Better differentiation, not a better recovery, is what's missing.
