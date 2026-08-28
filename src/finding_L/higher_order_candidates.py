@@ -2,6 +2,7 @@ import itertools
 
 import numpy as np
 import sympy as sp
+from generation.eqnofmotion import defineCoordinates
 from generation.ostrogradski import TIME, eulerLagrangeExpression
 
 
@@ -87,4 +88,86 @@ def buildEulerLagrangeMatrix(library, coordinate, lagrangianOrder, noStateVars, 
         elExpressions.append(elExpression)
         evaluated = lambdified(*derivativeColumns)
         matrix[:, columnIndex] = np.broadcast_to(np.asarray(evaluated, dtype=float), (noRows,))
+    return matrix, elExpressions
+
+
+# --- Multi-field generalisation -------------------------------------------------
+# State symbols form a grid s[field][level], level 0..lagrangianOrder. The
+# Euler-Lagrange matrix stacks one row-block per field (rows = timepoints x fields),
+# exactly as the ordinary 2nd-order streaming path stacks per-coordinate blocks.
+
+
+def stateGridSymbols(noFields, lagrangianOrder):
+    return [
+        [sp.Symbol(f"s{field}_{level}") for level in range(lagrangianOrder + 1)]
+        for field in range(noFields)
+    ]
+
+
+def multiFieldLibrary(noFields, lagrangianOrder, maxDegree):
+    flat = [symbol for row in stateGridSymbols(noFields, lagrangianOrder) for symbol in row]
+    library = []
+    seen = set()
+    for degree in range(1, maxDegree + 1):
+        for combo in itertools.combinations_with_replacement(range(len(flat)), degree):
+            key = tuple(sorted(combo))
+            if key in seen:
+                continue
+            seen.add(key)
+            monomial = sp.Integer(1)
+            for index in combo:
+                monomial *= flat[index]
+            library.append(sp.expand(monomial))
+    return library
+
+
+def multiFieldMonomialToCoordinates(monomial, coords, noFields, lagrangianOrder):
+    grid = stateGridSymbols(noFields, lagrangianOrder)
+    substitution = {}
+    for field in range(noFields):
+        for level in range(lagrangianOrder + 1):
+            substitution[grid[field][level]] = (
+                coords[field] if level == 0 else sp.diff(coords[field], TIME, level)
+            )
+    return sp.sympify(monomial).subs(substitution)
+
+
+def buildMultiFieldElMatrix(library, noFields, lagrangianOrder, derivativeData):
+    """derivativeData: list over derivative levels 0..columnOrder, each an array of
+    shape (rows, noFields). Returns (matrix, elExpressions) with the matrix stacked
+    field-by-field: matrix[j*rows:(j+1)*rows, c] is coord j's EL column for candidate c.
+    """
+    columnOrder = len(derivativeData) - 1
+    noRows = derivativeData[0].shape[0]
+    _t, coords, _v = defineCoordinates(noFields)
+
+    dataSymbols = [[sp.Symbol(f"d{field}_{level}") for level in range(columnOrder + 1)] for field in range(noFields)]
+    toData = {}
+    for field in range(noFields):
+        for level in range(columnOrder + 1):
+            key = coords[field] if level == 0 else sp.diff(coords[field], TIME, level)
+            toData[key] = dataSymbols[field][level]
+    flatDataSymbols = [symbol for row in dataSymbols for symbol in row]
+    evaluationArgs = [derivativeData[level][:, field] for field in range(noFields) for level in range(columnOrder + 1)]
+
+    matrix = np.zeros((noRows * noFields, len(library)))
+    elExpressions = []
+    for columnIndex, monomial in enumerate(library):
+        termInCoords = multiFieldMonomialToCoordinates(monomial, coords, noFields, lagrangianOrder)
+        perField = []
+        for j in range(noFields):
+            elExpression = eulerLagrangeExpression(termInCoords, coords[j], lagrangianOrder, pipelineSign=True)
+            substituted = elExpression.subs(toData)
+            if substituted.atoms(sp.Derivative):
+                raise ValueError(
+                    f"candidate {monomial} produces derivatives above column order {columnOrder}; "
+                    f"raise columnOrder / lagrangianOrder"
+                )
+            perField.append(substituted)
+            function = sp.lambdify(flatDataSymbols, substituted, modules="numpy")
+            evaluated = function(*evaluationArgs)
+            matrix[j * noRows:(j + 1) * noRows, columnIndex] = np.broadcast_to(
+                np.asarray(evaluated, dtype=float), (noRows,)
+            )
+        elExpressions.append(perField)
     return matrix, elExpressions
