@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as sp
+from generation.constraints import DegenerateLagrangianResult
 from generation.ostrogradski import TIME, eulerLagrangeSystem
 from generation.ostrogradski_hamiltonian import ostrogradskiHamiltonian
 
@@ -47,6 +48,30 @@ def hamiltonianHessian(hamiltonian, variables):
 
 def detectGhost(lagrangian, coords, order=None, constants=None, eigenvalueTolerance=1e-8):
     hamiltonianData = ostrogradskiHamiltonian(lagrangian, coords, order, constants)
+
+    if isinstance(hamiltonianData, DegenerateLagrangianResult):
+        # Degenerate Lagrangian: the naive Ostrogradski Hamiltonian does not
+        # exist. The ghost question is only meaningful after constrained-Hamiltonian
+        # reduction (out of scope). Report the constraint structure instead.
+        try:
+            roots = characteristicRoots(lagrangian, coords, order)
+            stability = dynamicalStability(roots)
+        except (ValueError, TypeError, sp.PolynomialError):
+            roots, stability = [], "undetermined"
+        return {
+            "ghost": None,
+            "degenerate": True,
+            "order": hamiltonianData.order,
+            "constraintAnalysis": hamiltonianData,
+            "characteristicRoots": [complex(root) for root in roots],
+            "dynamicalStability": stability,
+            "detail": (
+                "Lagrangian is degenerate; ghost verdict undetermined without "
+                f"constrained-Hamiltonian reduction. {hamiltonianData.firstClassCount} first-class "
+                f"and {hamiltonianData.secondClassCount} second-class primary constraint(s)."
+            ),
+        }
+
     hamiltonian = sp.expand(hamiltonianData["hamiltonian"])
 
     positions, momenta = _phaseSpaceSymbols(hamiltonianData)

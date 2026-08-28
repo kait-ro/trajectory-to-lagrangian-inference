@@ -1,5 +1,10 @@
 
 import sympy as sp
+from generation.constraints import (
+    DegenerateLagrangianResult,
+    PrimaryConstraint,
+    classifyConstraints,
+)
 from generation.ostrogradski import TIME, lagrangianOrder, timeDerivative
 
 
@@ -68,10 +73,9 @@ def ostrogradskiHamiltonian(lagrangian, coords, order=None, constants=None):
 
     solutions = sp.solve(topEquations, topDerivativeSymbols, dict=True)
     if not solutions:
-        raise ValueError(
-            "Lagrangian is degenerate in its highest derivative (cannot invert the highest momentum); "
-            "reduce it to non-degenerate form or lower the order before Ostrogradski analysis"
-        )
+        # Degenerate: the top-momentum relation is not invertible for q^(n).
+        # Return the constraint structure rather than raising -- see item 8.
+        return analyzeDegenerateLagrangian(lagrangian, coords, resolvedOrder, constants)
     if len(solutions) > 1:
         # Multiple branches => L is nonlinear in q^(n) and the Legendre transform
         # is multi-valued. Refuse to guess; see NonUniqueTopDerivativeError.
@@ -109,6 +113,113 @@ def ostrogradskiHamiltonian(lagrangian, coords, order=None, constants=None):
         "momentumTimeExpressions": momentumExpressions,
         "topDerivativeSolution": {topDerivativeSymbols[i]: topSolution[topDerivativeSymbols[i]] for i in range(noCoords)},
     }
+
+
+def _flatCanonicalPairs(positionSymbols, momentumSymbols):
+    """Flatten the per-coordinate canonical symbols into paired flat lists so that
+    {positions[k], momenta[k]} = 1 for every k."""
+    positions, momenta = [], []
+    for perCoordPositions, perCoordMomenta in zip(positionSymbols, momentumSymbols):
+        positions.extend(perCoordPositions)
+        momenta.extend(perCoordMomenta)
+    return positions, momenta
+
+
+def analyzeDegenerateLagrangian(lagrangian, coords, order=None, constants=None):
+    """Primary-constraint detection + first/second-class classification for a
+    Lagrangian whose top-momentum relation p_n = dL/dq^(n) cannot be inverted.
+
+    Scope: primary constraints from the top-momentum Hessian null space, the
+    Poisson-bracket matrix among them, and the {phi, H} consistency check.
+    Secondary constraints are flagged, not computed; no Dirac bracket.
+    """
+    lagrangian = sp.expand(sp.sympify(lagrangian))
+    resolvedOrder = lagrangianOrder(lagrangian, coords) if order is None else order
+    noCoords = len(coords)
+
+    positionSymbols, momentumSymbols = _canonicalSymbols(noCoords, resolvedOrder)
+    multiplierSymbols = [sp.Symbol(f"u{i}") for i in range(noCoords)]  # undetermined q_i^(n)
+
+    canonicalMap = {}
+    for i in range(noCoords):
+        for k in range(resolvedOrder):
+            canonicalMap[timeDerivative(coords[i], k)] = positionSymbols[i][k]
+        canonicalMap[sp.diff(coords[i], TIME, resolvedOrder)] = multiplierSymbols[i]
+
+    lagrangianCanonical = sp.expand(lagrangian.subs(canonicalMap, simultaneous=True))
+
+    # top-momentum relations  P_i^n - dL/dq_i^(n)  in canonical variables
+    topPartials = [sp.diff(lagrangianCanonical, multiplierSymbols[i]) for i in range(noCoords)]
+    topMomenta = [momentumSymbols[i][resolvedOrder - 1] for i in range(noCoords)]
+    topRelations = [sp.expand(topMomenta[i] - topPartials[i]) for i in range(noCoords)]
+
+    # Hessian W_ab = d^2 L / dq_a^(n) dq_b^(n); its null space gives the primary constraints
+    hessian = sp.Matrix(
+        noCoords, noCoords,
+        lambda a, b: sp.diff(topPartials[a], multiplierSymbols[b]),
+    )
+
+    constraints = []
+    for nullVector in hessian.nullspace():
+        denominators = [sp.fraction(component)[1] for component in nullVector]
+        scale = sp.ilcm(*[int(d) for d in denominators]) if denominators else 1
+        integerVector = [sp.nsimplify(scale * component) for component in nullVector]
+        expression = sp.expand(sum(integerVector[a] * topRelations[a] for a in range(noCoords)))
+        # the multiplier parts cancel by construction (W . nullVector = 0); drop any residue
+        expression = sp.expand(expression.subs({u: 0 for u in multiplierSymbols}))
+        if expression != 0:
+            constraints.append(
+                PrimaryConstraint(expression, origin="top-momentum relation not invertible")
+            )
+
+    # canonical H_c = sum P * velocity - L_c, with solvable multipliers eliminated
+    # and the remaining (undetermined) ones set to zero on the primary surface.
+    solvableForMultipliers = sp.solve(
+        [relation for relation in topRelations if relation.free_symbols & set(multiplierSymbols)],
+        multiplierSymbols,
+        dict=True,
+    )
+    multiplierValues = solvableForMultipliers[0] if solvableForMultipliers else {}
+    multiplierValues = {u: multiplierValues.get(u, sp.Integer(0)) for u in multiplierSymbols}
+
+    hamiltonian = sp.Integer(0)
+    for i in range(noCoords):
+        for k in range(1, resolvedOrder + 1):
+            velocity = positionSymbols[i][k] if k < resolvedOrder else multiplierSymbols[i]
+            hamiltonian += momentumSymbols[i][k - 1] * velocity
+    hamiltonian = sp.expand(hamiltonian - lagrangianCanonical)
+    hamiltonian = sp.expand(hamiltonian.subs(multiplierValues))
+    if constants:
+        hamiltonian = hamiltonian.subs(constants)
+        constraints = [
+            PrimaryConstraint(sp.expand(c.expression.subs(constants)), c.origin) for c in constraints
+        ]
+
+    flatPositions, flatMomenta = _flatCanonicalPairs(positionSymbols, momentumSymbols)
+    classes, bracket, firstCount, secondCount, secondaryExpected = classifyConstraints(
+        constraints, hamiltonian, flatPositions, flatMomenta
+    )
+
+    detail = (
+        "Primary constraints found from the non-invertible top-momentum relation. "
+        "First-class => generates a gauge transformation; second-class => reduces the "
+        "physical phase space in pairs. Dirac-bracket construction and secondary-constraint "
+        "iteration are out of scope."
+    )
+    return DegenerateLagrangianResult(
+        order=resolvedOrder,
+        positionSymbols=flatPositions,
+        momentumSymbols=flatMomenta,
+        canonicalHamiltonian=hamiltonian,
+        primaryConstraints=constraints,
+        poissonBracketMatrix=bracket,
+        constraintClass=classes,
+        firstClassCount=firstCount,
+        secondClassCount=secondCount,
+        secondaryConstraintsExpected=secondaryExpected,
+        detail=detail,
+        multiplierSymbols=multiplierSymbols,
+    )
 
 
 def hamiltonianOnTrajectory(hamiltonianData, coords, constants, derivativeArrays):
