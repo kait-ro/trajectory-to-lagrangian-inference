@@ -1,0 +1,21 @@
+[project]
+name = "something"
+version = "0.1.0"
+description = "Lagrangian discovery from trajectory data: symbolic Euler-Lagrange generation, forward-selection sparse regression, higher-derivative (Ostrogradski) extension and ghost detection."
+authors = [
+    { name = "kait-ro", email = "dabruanikait@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "sympy>=1.13",
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = []
