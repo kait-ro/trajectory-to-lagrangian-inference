@@ -1,10 +1,11 @@
 """Ostrogradski / Euler-Lagrange machinery against closed-form results."""
 
+import pytest
 import sympy as sp
 
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ostrogradski import eulerLagrangeExpression, lagrangianOrder
-from generation.ostrogradski_hamiltonian import ostrogradskiHamiltonian
+from generation.ostrogradski_hamiltonian import NonUniqueTopDerivativeError, ostrogradskiHamiltonian
 
 OMEGA = sp.Symbol("omega", positive=True)
 
@@ -53,3 +54,16 @@ def test_free_particle_hamiltonian_is_kinetic_only():
     data = ostrogradskiHamiltonian(lagrangian, coords)
     momentum = data["momentumSymbols"][0][0]
     assert sp.expand(data["hamiltonian"] - sp.Rational(1, 2) * momentum ** 2) == 0
+
+
+def test_nonlinear_top_derivative_raises_rather_than_guessing_a_branch():
+    # L nonlinear in qddot -> the top-momentum relation p = qddot + qddot**3 has
+    # three roots, so the Legendre transform is multi-valued (item 4).
+    _t, coords, _vels = defineCoordinates(1)
+    q = coords[0]
+    acceleration = sp.diff(q, TIME, 2)
+    lagrangian = sp.Rational(1, 2) * acceleration ** 2 + sp.Rational(1, 4) * acceleration ** 4 - sp.Rational(1, 2) * q ** 2
+
+    with pytest.raises(NonUniqueTopDerivativeError) as excinfo:
+        ostrogradskiHamiltonian(lagrangian, coords)
+    assert len(excinfo.value.branches) > 1

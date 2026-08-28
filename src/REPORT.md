@@ -309,7 +309,7 @@ Now emits a `RuntimeWarning` ("singular active Gram block ... coefficients on
 collinear terms are not individually identifiable") when it falls back from
 `np.linalg.solve` to `lstsq`. Behaviour otherwise unchanged.
 
-### 6. Test suite — `tests/` (`uv run pytest`, 17 tests)
+### 6. Test suite — `tests/` (`uv run pytest`, 19 tests)
 `test_ostrogradski.py`, `test_pu_oscillator.py`, `test_equivalence_class.py`,
 `test_gram_forward_select.py`, `test_frozen_tolerances.py`. Added `pytest` to the
 `dev` dependency group and `[tool.pytest.ini_options] pythonpath = ["src"]`.

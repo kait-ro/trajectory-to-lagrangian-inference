@@ -56,7 +56,7 @@ the higher-derivative validation studies.
 
 ### Tests
 
-`tests/` (`uv run pytest`, 17): EL / Ostrogradski Hamiltonian vs closed form,
+`tests/` (`uv run pytest`, 19): EL / Ostrogradski Hamiltonian vs closed form,
 PU EOM + Hamiltonian conservation, the equivalence-class classifier both ways,
 forward selection on a synthetic Gram matrix, and the frozen-tolerance
 discipline.

@@ -44,3 +44,12 @@ def test_empty_active_set_returns_empty():
     gram, kineticIndex, _ = _synthetic_gram()
     b = -gram[:, kineticIndex]
     assert fitActiveCoefficientsFromGram(gram, b, []).size == 0
+
+
+def test_singular_active_block_warns_and_falls_back_to_lstsq(recwarn):
+    # Two identical active columns -> singular G[S,S] -> lstsq fallback (item 5).
+    gram = np.array([[1.0, 1.0, 0.5], [1.0, 1.0, 0.5], [0.5, 0.5, 2.0]])
+    b = np.array([1.0, 1.0, 0.3])
+    coefficients = fitActiveCoefficientsFromGram(gram, b, [0, 1])
+    assert coefficients.shape == (2,)
+    assert any(issubclass(w.category, RuntimeWarning) for w in recwarn.list)
