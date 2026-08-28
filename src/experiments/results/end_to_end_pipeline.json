@@ -1,0 +1,46 @@
+[
+  {
+    "noiseLevel": 0.0,
+    "differentiationMethod": "smoothing_spline",
+    "order": 2,
+    "orderConfidence": 1.0,
+    "ghost": true,
+    "ghostConfidence": 1.0,
+    "coefficientConfidence": 0.5142857142857142,
+    "discoveredLagrangian": "4*s0**2 + 5*s0*s2 + s2**2",
+    "detail": "100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.250."
+  },
+  {
+    "noiseLevel": 0.001,
+    "differentiationMethod": "smoothing_spline",
+    "order": 2,
+    "orderConfidence": 1.0,
+    "ghost": true,
+    "ghostConfidence": 1.0,
+    "coefficientConfidence": 0.5142857142857142,
+    "discoveredLagrangian": "4*s0**2 + 5*s0*s2 + s2**2",
+    "detail": "100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.250."
+  },
+  {
+    "noiseLevel": 0.003,
+    "differentiationMethod": "savitzky_golay",
+    "order": 2,
+    "orderConfidence": 1.0,
+    "ghost": true,
+    "ghostConfidence": 1.0,
+    "coefficientConfidence": 0.5999999999999999,
+    "discoveredLagrangian": "11*s0**2/3 + 14*s0*s2/3 + s2**2",
+    "detail": "100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.167."
+  },
+  {
+    "noiseLevel": 0.01,
+    "differentiationMethod": "smoothing_spline",
+    "order": 2,
+    "orderConfidence": 1.0,
+    "ghost": true,
+    "ghostConfidence": 1.0,
+    "coefficientConfidence": 0.5999999999999999,
+    "discoveredLagrangian": "4*s0**2 + 5*s0*s2 + s2**2",
+    "detail": "100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.167."
+  }
+]

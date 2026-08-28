@@ -1,0 +1,25 @@
+End-to-end pipeline: noisy positions -> L, ghost verdict, confidence  (true system: PU, order 2, ghost)
+
+[0% position noise]  diff method: smoothing_spline
+  order 2 (conf 1.00)   ghost True (conf 1.00)   coeff conf 0.51
+  L = 4*s0**2 + 5*s0*s2 + s2**2
+  100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.250.
+
+[0.1% position noise]  diff method: smoothing_spline
+  order 2 (conf 1.00)   ghost True (conf 1.00)   coeff conf 0.51
+  L = 4*s0**2 + 5*s0*s2 + s2**2
+  100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.250.
+
+[0.3% position noise]  diff method: savitzky_golay
+  order 2 (conf 1.00)   ghost True (conf 1.00)   coeff conf 0.60
+  L = 11*s0**2/3 + 14*s0*s2/3 + s2**2
+  100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.167.
+
+[1% position noise]  diff method: smoothing_spline
+  order 2 (conf 1.00)   ghost True (conf 1.00)   coeff conf 0.60
+  L = 4*s0**2 + 5*s0*s2 + s2**2
+  100% of methods agree on order 2, 100% agree on the ghost verdict; max coefficient spread 0.167.
+
+Order and ghost verdict are recovered correctly and with full cross-method
+agreement at every noise level tested. The coefficient values drift with noise
+(differentiation-limited) -- the pipeline reports that as a low coefficient confidence.
