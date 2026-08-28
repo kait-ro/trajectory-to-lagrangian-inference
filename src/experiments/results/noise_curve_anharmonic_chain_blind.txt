@@ -14,9 +14,9 @@ equiv? = is (discovered - expected) a genuine null Lagrangian (EL operator ident
 
   noise    outcome  missing  spurious  max|dcoef|  finalResid   equiv?
 ----------------------------------------------------------------------
-     0%     failed        1         3      0.0159      0.0127       no
-     1%     failed       10        16      0.1309      0.0444       no
+     5%     failed       12         5      0.2224      0.1382       no
+    10%     failed       12         3      0.2133      0.1851       no
 
 Equivalence-class verdict per noise level (discovered - expected):
-  [0% noise] NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct
-  [1% noise] NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct
+  [5% noise] NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct
+  [10% noise] NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct
