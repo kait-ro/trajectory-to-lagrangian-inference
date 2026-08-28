@@ -1,0 +1,29 @@
+Phase 2.4 - jerk/snap distractor library (Pais-Uhlenbeck)
+library: degree<=2 monomials in (q, q', q'', q'''), Lagrangian order 3, EL columns to order 6
+expected order-2 Lagrangian: 4.0*s0**2 - 5.0*s1**2 + s2**2
+
+[ground_truth]
+  recovered: -3*s0**2/4 + s2**2 - 7*s3**2/30
+  jerk/snap distractor terms selected: ['s3**2']
+  equivalence-class match to true PU Lagrangian: False
+
+[savgol_0.1pct]
+  recovered: 131*s0*s2 + s2**2
+  jerk/snap distractor terms selected: none
+  equivalence-class match to true PU Lagrangian: False
+
+[savgol_0.5pct]
+  recovered: s2**2 - 0.008452*s3**2
+  jerk/snap distractor terms selected: ['s3**2']
+  equivalence-class match to true PU Lagrangian: False
+
+[savgol_1pct]
+  recovered: s2**2 - 0.008452*s3**2
+  jerk/snap distractor terms selected: ['s3**2']
+  equivalence-class match to true PU Lagrangian: False
+
+[savgol_3pct]
+  recovered: -269*s0**2 + s2**2
+  jerk/snap distractor terms selected: none
+  equivalence-class match to true PU Lagrangian: False
+

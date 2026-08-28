@@ -1,0 +1,72 @@
+[
+  {
+    "scenario": "ground_truth",
+    "recovered": "-3*s0**2/4 + s2**2 - 7*s3**2/30",
+    "selectedTerms": [
+      [
+        "s3**2",
+        -0.23809523809523805
+      ],
+      [
+        "s0**2",
+        -0.7619047619047625
+      ]
+    ],
+    "spuriousJerkTerms": [
+      "s3**2"
+    ],
+    "equivalentUpToNullLagrangian": false
+  },
+  {
+    "scenario": "savgol_0.1pct",
+    "recovered": "131*s0*s2 + s2**2",
+    "selectedTerms": [
+      [
+        "s0*s2",
+        131.0309266527851
+      ]
+    ],
+    "spuriousJerkTerms": [],
+    "equivalentUpToNullLagrangian": false
+  },
+  {
+    "scenario": "savgol_0.5pct",
+    "recovered": "s2**2 - 0.008452*s3**2",
+    "selectedTerms": [
+      [
+        "s3**2",
+        -0.00845215108428471
+      ]
+    ],
+    "spuriousJerkTerms": [
+      "s3**2"
+    ],
+    "equivalentUpToNullLagrangian": false
+  },
+  {
+    "scenario": "savgol_1pct",
+    "recovered": "s2**2 - 0.008452*s3**2",
+    "selectedTerms": [
+      [
+        "s3**2",
+        -0.008452021391201305
+      ]
+    ],
+    "spuriousJerkTerms": [
+      "s3**2"
+    ],
+    "equivalentUpToNullLagrangian": false
+  },
+  {
+    "scenario": "savgol_3pct",
+    "recovered": "-269*s0**2 + s2**2",
+    "selectedTerms": [
+      [
+        "s0**2",
+        -269.1750124093225
+      ]
+    ],
+    "spuriousJerkTerms": [],
+    "equivalentUpToNullLagrangian": false
+  }
+]

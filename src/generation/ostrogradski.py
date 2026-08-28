@@ -1,6 +1,5 @@
 import numpy as np
 import sympy as sp
-
 from generation.eqnofmotion import TIME
 
 

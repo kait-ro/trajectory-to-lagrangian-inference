@@ -21,7 +21,7 @@ def savitzkyGolayDerivatives(signal, dt, maxOrder, windowLength=None, polyOrder=
     signal = np.asarray(signal, dtype=float)
     polyOrder = max(maxOrder + 1, 4) if polyOrder is None else polyOrder
     if windowLength is None:
-        windowLength = max(polyOrder + 2, int(round(len(signal) * 0.02)) | 1)
+        windowLength = max(polyOrder + 2, round(len(signal) * 0.02) | 1)
     if windowLength % 2 == 0:
         windowLength += 1
     windowLength = min(windowLength, len(signal) - (1 - len(signal) % 2))

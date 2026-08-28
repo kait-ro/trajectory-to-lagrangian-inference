@@ -1,0 +1,183 @@
+{
+  "reference": {
+    "healthy_second_order_oscillator": {
+      "ghost": false,
+      "order": 1,
+      "dynamicalStability": "oscillatory",
+      "hamiltonianEigenvalues": [
+        1.0,
+        4.0
+      ],
+      "detail": "H is positive semidefinite -> bounded below -> no ghost"
+    },
+    "pais_uhlenbeck_ghost": {
+      "ghost": true,
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "hamiltonianEigenvalues": [
+        -8.0,
+        -0.09901951359278481,
+        0.5,
+        10.099019513592786
+      ],
+      "detail": "H is indefinite (2 negative direction(s)) while the dynamics are oscillatory: negative-energy mode present -> Ostrogradski ghost. Linear-in-momentum sector: 1 null momentum direction(s)."
+    },
+    "pais_uhlenbeck_plus_total_derivative": {
+      "ghost": true,
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "hamiltonianEigenvalues": [
+        -8.256939094329987,
+        -0.2360679774997897,
+        0.7569390943299867,
+        4.23606797749979
+      ],
+      "detail": "H is indefinite (2 negative direction(s)) while the dynamics are oscillatory: negative-energy mode present -> Ostrogradski ghost. Linear-in-momentum sector: 1 null momentum direction(s)."
+    }
+  },
+  "noiseBoundary": [
+    {
+      "scenario": "ground_truth",
+      "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.680770730829003,
+        -1.0,
+        1.0,
+        1.1807707308290052
+      ]
+    },
+    {
+      "scenario": "0.1pct",
+      "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.680770730829003,
+        -1.0,
+        1.0,
+        1.1807707308290052
+      ]
+    },
+    {
+      "scenario": "0.5pct",
+      "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.680770730829003,
+        -1.0,
+        1.0,
+        1.1807707308290052
+      ]
+    },
+    {
+      "scenario": "1pct",
+      "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.680770730829003,
+        -1.0,
+        1.0,
+        1.1807707308290052
+      ]
+    },
+    {
+      "scenario": "3pct",
+      "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.680770730829003,
+        -1.0,
+        1.0,
+        1.1807707308290052
+      ]
+    },
+    {
+      "scenario": "5pct",
+      "recovered": "3*s0**2 + 4*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -6.566084380618437,
+        -1.0,
+        1.0,
+        1.066084380618437
+      ]
+    },
+    {
+      "scenario": "8pct",
+      "recovered": "10*s0**2/3 + 9*s0*s2/2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -7.314500758262035,
+        -1.0,
+        1.0,
+        1.147834091595368
+      ]
+    },
+    {
+      "scenario": "12pct",
+      "recovered": "7*s0**2/2 + 14*s0*s2/3 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -7.666666666666667,
+        -1.0,
+        1.0,
+        1.1666666666666667
+      ]
+    },
+    {
+      "scenario": "18pct",
+      "recovered": "10*s0**2/3 + 9*s0*s2/2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -7.314500758262035,
+        -1.0,
+        1.0,
+        1.147834091595368
+      ]
+    },
+    {
+      "scenario": "25pct",
+      "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.680770730829003,
+        -1.0,
+        1.0,
+        1.1807707308290052
+      ]
+    },
+    {
+      "scenario": "35pct",
+      "recovered": "11*s0**2/3 + 5*s0*s2 + s2**2",
+      "order": 2,
+      "dynamicalStability": "oscillatory",
+      "ghost": true,
+      "hamiltonianEigenvalues": [
+        -8.063200619816882,
+        -1.0,
+        1.0,
+        1.2298672864835498
+      ]
+    }
+  ]
+}

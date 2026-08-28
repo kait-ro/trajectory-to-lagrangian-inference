@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import sympy as sp
-
 from generation.eqnofmotion import TIME, EulerLagrangeEqn
 
 GRAM_DENSE_CELL_BUDGET = 48_000_000
@@ -67,7 +66,7 @@ def buildGramMatrixChunked(
     noCoords: int,
     chunkRows: int = 200_000,
     cellBudget: int = GRAM_DENSE_CELL_BUDGET,
-    lambdifiedCache: dict = None,
+    lambdifiedCache: dict | None = None,
 ):
     noCandidates = len(candidateTerms)
     lambdifiedFuncsPerTerm = lambdifiedColumnsForTerms(candidateTerms, coords, vels, t, lambdifiedCache)

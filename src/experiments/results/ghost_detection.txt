@@ -1,0 +1,38 @@
+Ghost detection on reference systems
+
+[healthy_second_order_oscillator]
+  Lagrangian order: 1   dynamics: oscillatory
+  H = P0_1**2/2 + 2*Q0_0**2
+  Hessian(H) eigenvalues: [1.0, 4.0]
+  ghost: False  --  H is positive semidefinite -> bounded below -> no ghost
+
+[pais_uhlenbeck_ghost]
+  Lagrangian order: 2   dynamics: oscillatory
+  H = P0_1*Q0_1 + P0_2**2/4 - 4*Q0_0**2 + 5*Q0_1**2
+  Hessian(H) eigenvalues: [-8.0, -0.099, 0.5, 10.099]
+  ghost: True  --  H is indefinite (2 negative direction(s)) while the dynamics are oscillatory: negative-energy mode present -> Ostrogradski ghost. Linear-in-momentum sector: 1 null momentum direction(s).
+
+[pais_uhlenbeck_plus_total_derivative]
+  Lagrangian order: 2   dynamics: oscillatory
+  H = P0_1*Q0_1 + P0_2**2/4 - 3*P0_2*Q0_0/2 - 4*Q0_0**2 + 9*Q0_0*q0(t)/2 + 2*Q0_1**2 - 9*q0(t)**2/4
+  Hessian(H) eigenvalues: [-8.2569, -0.2361, 0.7569, 4.2361]
+  ghost: True  --  H is indefinite (2 negative direction(s)) while the dynamics are oscillatory: negative-energy mode present -> Ostrogradski ghost. Linear-in-momentum sector: 1 null momentum direction(s).
+
+Ghost verdict vs measurement noise (Pais-Uhlenbeck, omega=1,2)
+
+  ground_truth: recovered L = 4*s0**2 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.681, -1.0, 1.0, 1.181]
+        0.1pct: recovered L = 4*s0**2 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.681, -1.0, 1.0, 1.181]
+        0.5pct: recovered L = 4*s0**2 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.681, -1.0, 1.0, 1.181]
+          1pct: recovered L = 4*s0**2 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.681, -1.0, 1.0, 1.181]
+          3pct: recovered L = 4*s0**2 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.681, -1.0, 1.0, 1.181]
+          5pct: recovered L = 3*s0**2 + 4*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-6.566, -1.0, 1.0, 1.066]
+          8pct: recovered L = 10*s0**2/3 + 9*s0*s2/2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-7.315, -1.0, 1.0, 1.148]
+         12pct: recovered L = 7*s0**2/2 + 14*s0*s2/3 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-7.667, -1.0, 1.0, 1.167]
+         18pct: recovered L = 10*s0**2/3 + 9*s0*s2/2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-7.315, -1.0, 1.0, 1.148]
+         25pct: recovered L = 4*s0**2 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.681, -1.0, 1.0, 1.181]
+         35pct: recovered L = 11*s0**2/3 + 5*s0*s2 + s2**2    order=2  dynamics=oscillatory  ghost=True  eig(H)=[-8.063, -1.0, 1.0, 1.23]
+
+Interpretation: the ghost verdict is stable as long as the recovered Lagrangian stays order-2
+with oscillatory dynamics; it fails when noise pushes the recovered coefficients to a
+configuration whose characteristic roots gain a real part (spurious runaway) or whose
+highest-derivative term is lost.

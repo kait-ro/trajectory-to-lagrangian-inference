@@ -1,6 +1,5 @@
 import numpy as np
 import sympy as sp
-
 from generation.ostrogradski import TIME, eulerLagrangeSystem
 from generation.ostrogradski_hamiltonian import ostrogradskiHamiltonian
 

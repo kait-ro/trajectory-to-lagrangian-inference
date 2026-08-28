@@ -1,0 +1,17 @@
+anharmonic_chain_blind
+Anisotropic anharmonic chain: per-site stiffness, open nearest-neighbour bilinear coupling, cubic asymmetry, quartic confinement. Blind holdout - structurally disjoint from the isotropic (r^2)^2 calibration system (distinct per-coordinate coefficients, sparse coupling, odd-power term, no quartic cross terms).
+
+ROLE: BLIND HOLDOUT -- tolerances frozen from the calibration system, no retuning
+Locked tolerances (calibrated on 'isotropic_quartic_calibration', frozen for all holdout systems):
+       correlationCutoff = 0.1
+    residualRmsTolerance = 0.01
+  pruneRelativeThreshold = 0.01
+     stagnationTolerance = 0.01
+      stagnationPatience = 3
+               degreeCap = 4
+
+equiv? = is (discovered - expected) a genuine null Lagrangian (EL operator identically zero)
+
+  noise    outcome  missing  spurious  max|dcoef|  finalResid   equiv?
+----------------------------------------------------------------------
+     0%     failed        1         3      0.0159      0.0127       no

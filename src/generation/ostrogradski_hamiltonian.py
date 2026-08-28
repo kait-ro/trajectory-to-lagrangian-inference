@@ -1,6 +1,32 @@
-import sympy as sp
 
+import sympy as sp
 from generation.ostrogradski import TIME, lagrangianOrder, timeDerivative
+
+
+class NonUniqueTopDerivativeError(ValueError):
+    """Raised when the Ostrogradski top-momentum relation has more than one branch.
+
+    p_top = dL/dq^(n) can be inverted for q^(n) uniquely only when L is (at most)
+    quadratic in its highest derivative -- then the relation is affine and the
+    Legendre transform is single-valued. If L is nonlinear in q^(n) (e.g. a
+    (q^(n))^4 term, or q^(n) appearing inside a non-polynomial function), the
+    inversion has several roots, each giving a different Hamiltonian on a
+    different sheet of phase space.
+
+    There is no purely local rule for which branch is "physical": the standard
+    choice is the sheet that connects continuously to the non-degenerate /
+    weak-coupling limit, or the one consistent with a reference trajectory. That
+    choice belongs to the caller, so this is surfaced rather than silently
+    resolved by taking the first root.
+    """
+
+    def __init__(self, branches):
+        self.branches = branches
+        super().__init__(
+            f"Ostrogradski top-derivative inversion is not unique ({len(branches)} branches); "
+            f"L is nonlinear in its highest derivative. Reduce L, lower the order, or pick a "
+            f"branch explicitly. Branches: {branches}"
+        )
 
 
 def ostrogradskiMomentumExpressions(lagrangian, coords, order):
@@ -45,6 +71,12 @@ def ostrogradskiHamiltonian(lagrangian, coords, order=None, constants=None):
         raise ValueError(
             "Lagrangian is degenerate in its highest derivative (cannot invert the highest momentum); "
             "reduce it to non-degenerate form or lower the order before Ostrogradski analysis"
+        )
+    if len(solutions) > 1:
+        # Multiple branches => L is nonlinear in q^(n) and the Legendre transform
+        # is multi-valued. Refuse to guess; see NonUniqueTopDerivativeError.
+        raise NonUniqueTopDerivativeError(
+            [{str(k): v for k, v in solution.items()} for solution in solutions]
         )
     topSolution = solutions[0]
 

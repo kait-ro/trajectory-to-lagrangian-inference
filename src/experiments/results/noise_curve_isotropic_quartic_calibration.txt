@@ -1,0 +1,17 @@
+isotropic_quartic_calibration
+Isotropic quartic oscillator L = m/2 v^2 - k/2 r^2 - eps/4 (r^2)^2. Calibration system.
+
+ROLE: CALIBRATION SYSTEM -- tolerances were fit here, then locked
+Locked tolerances (calibrated on 'isotropic_quartic_calibration', frozen for all holdout systems):
+       correlationCutoff = 0.1
+    residualRmsTolerance = 0.01
+  pruneRelativeThreshold = 0.01
+     stagnationTolerance = 0.01
+      stagnationPatience = 3
+               degreeCap = 4
+
+equiv? = is (discovered - expected) a genuine null Lagrangian (EL operator identically zero)
+
+  noise    outcome  missing  spurious  max|dcoef|  finalResid   equiv?
+----------------------------------------------------------------------
+     0%  recovered        0         0      0.0000      0.0113    exact

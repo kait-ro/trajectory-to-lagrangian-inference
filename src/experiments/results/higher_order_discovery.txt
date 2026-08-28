@@ -1,0 +1,45 @@
+Pais-Uhlenbeck higher-derivative Lagrangian recovery
+
+expected (kinetic q''^2 locked to 1): 4.0*s0**2 - 5.0*s1**2 + s2**2
+
+[ground_truth_derivatives]
+  recovered: 4*s0**2 + 5*s0*s2 + s2**2
+  exact match: False   equivalence-class match: True
+         s0**2: expected +4.0000  recovered +4.0000
+         s1**2: expected -5.0000  recovered +0.0000
+         s2**2: expected +1.0000  recovered +1.0000
+         s0*s2: expected +0.0000  recovered +5.0000
+
+[spline_from_0.1pct_noise]
+  recovered: 4*s0**2 + 5*s0*s2 + s2**2
+  exact match: False   equivalence-class match: True
+         s0**2: expected +4.0000  recovered +4.0000
+         s1**2: expected -5.0000  recovered +0.0000
+         s2**2: expected +1.0000  recovered +1.0000
+         s0*s2: expected +0.0000  recovered +5.0000
+
+[spline_from_0.5pct_noise]
+  recovered: 4*s0**2 + 5*s0*s2 + s2**2
+  exact match: False   equivalence-class match: True
+         s0**2: expected +4.0000  recovered +4.0000
+         s1**2: expected -5.0000  recovered +0.0000
+         s2**2: expected +1.0000  recovered +1.0000
+         s0*s2: expected +0.0000  recovered +5.0000
+
+[spline_from_1pct_noise]
+  recovered: 9*s0**2/2 + 11*s0*s2/2 + s2**2
+  exact match: False   equivalence-class match: False
+         s0**2: expected +4.0000  recovered +4.5000
+         s1**2: expected -5.0000  recovered +0.0000
+         s2**2: expected +1.0000  recovered +1.0000
+         s0*s2: expected +0.0000  recovered +5.5000
+    EL residual of (recovered - expected): 1.0*q0(t) + 1.0*Derivative(q0(t), (t, 2))
+
+[spline_from_3pct_noise]
+  recovered: 4*s0**2 + 5*s0*s2 + s2**2
+  exact match: False   equivalence-class match: True
+         s0**2: expected +4.0000  recovered +4.0000
+         s1**2: expected -5.0000  recovered +0.0000
+         s2**2: expected +1.0000  recovered +1.0000
+         s0*s2: expected +0.0000  recovered +5.0000
+

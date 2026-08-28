@@ -3,7 +3,8 @@ from dataclasses import dataclass
 import sympy as sp
 
 from finding_L.report import stateExpressionToFunctional
-from generation.eqnofmotion import TIME, EulerLagrangeEqn
+from generation.eqnofmotion import TIME
+from generation.ostrogradski import eulerLagrangeExpression, lagrangianOrder
 
 
 def _reduceToZero(expression):
@@ -14,18 +15,37 @@ def _reduceToZero(expression):
     return sp.Integer(0) if simplified == 0 else simplified
 
 
-def eulerLagrangeResidual(lagrangianFunctional, coords, vels):
-    residualArray = EulerLagrangeEqn(sp.expand(lagrangianFunctional), list(coords), list(vels))
-    return [_reduceToZero(component) for component in residualArray]
+def eulerLagrangeResidual(lagrangianFunctional, coords, vels, order=None):
+    """Euler-Lagrange residual of a Lagrangian *functional* (q_i(t) form).
+
+    Uses the full Ostrogradski operator sum_k (-1)^k d^k/dt^k dL/dq^(k), so it is
+    valid for higher-derivative Lagrangians, not only L(q, q'). `order` defaults
+    to the highest time-derivative order appearing in the expression.
+    """
+    lagrangian = sp.expand(lagrangianFunctional)
+    resolvedOrder = lagrangianOrder(lagrangian, list(coords)) if order is None else order
+    residual = [
+        eulerLagrangeExpression(lagrangian, coordinate, resolvedOrder) for coordinate in coords
+    ]
+    return [_reduceToZero(component) for component in residual]
 
 
-def isNullLagrangian(lagrangianFunctional, coords, vels):
-    residual = eulerLagrangeResidual(lagrangianFunctional, coords, vels)
+def isNullLagrangian(lagrangianFunctional, coords, vels, order=None):
+    residual = eulerLagrangeResidual(lagrangianFunctional, coords, vels, order)
     return all(component == 0 for component in residual), residual
 
 
 def reconstructBoundaryPotential(lagrangianFunctional, coords, vels):
+    """Recover F with dL = dF/dt, for a first-order dL affine in the velocities.
+
+    Returns None when dL is higher-order or not a genuine total time derivative;
+    the null-Lagrangian test in `isNullLagrangian` is the authoritative check,
+    this is only a convenience that names the boundary term when it can.
+    """
     expanded = sp.expand(lagrangianFunctional)
+
+    if lagrangianOrder(expanded, list(coords)) > 1:
+        return None
 
     velocityCoefficients = []
     remainder = expanded
@@ -73,7 +93,15 @@ class EquivalenceVerdict:
     detail: str
 
 
-def classifyLagrangianPair(lagrangianFunctionalA, lagrangianFunctionalB, coords, vels):
+def classifyLagrangianPair(lagrangianFunctionalA, lagrangianFunctionalB, coords, vels, order=None):
+    """Decide whether two Lagrangian functionals are the same physical theory.
+
+    They are equivalent iff their difference is a null Lagrangian: the
+    Euler-Lagrange operator annihilates it identically (not just numerically
+    small). A nonzero EL residual means the two produce different equations of
+    motion, so treating them as "the same" would reflect loose acceptance
+    tolerances rather than a real total-derivative degeneracy.
+    """
     difference = sp.expand(lagrangianFunctionalA - lagrangianFunctionalB)
 
     if difference == 0:
@@ -85,7 +113,7 @@ def classifyLagrangianPair(lagrangianFunctionalA, lagrangianFunctionalB, coords,
             "candidates are identical",
         )
 
-    residualIsNull, residual = isNullLagrangian(difference, coords, vels)
+    residualIsNull, residual = isNullLagrangian(difference, coords, vels, order)
     boundaryPotential = reconstructBoundaryPotential(difference, coords, vels) if residualIsNull else None
 
     if residualIsNull:
@@ -102,10 +130,10 @@ def classifyLagrangianPair(lagrangianFunctionalA, lagrangianFunctionalB, coords,
     return EquivalenceVerdict(residualIsNull, difference, residual, boundaryPotential, detail)
 
 
-def classifyDiscoveredPair(discoveredA, discoveredB, coords, vels):
+def classifyDiscoveredPair(discoveredA, discoveredB, coords, vels, order=None):
     functionalA = stateExpressionToFunctional(discoveredA.expression, coords, vels)
     functionalB = stateExpressionToFunctional(discoveredB.expression, coords, vels)
-    return classifyLagrangianPair(functionalA, functionalB, coords, vels)
+    return classifyLagrangianPair(functionalA, functionalB, coords, vels, order)
 
 
 def formatVerdict(verdict):

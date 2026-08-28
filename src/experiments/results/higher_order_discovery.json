@@ -1,0 +1,152 @@
+[
+  {
+    "scenario": "ground_truth_derivatives",
+    "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+    "expected": "4.0*s0**2 - 5.0*s1**2 + s2**2",
+    "coefficientRows": [
+      [
+        "s0**2",
+        4.0,
+        4.0
+      ],
+      [
+        "s1**2",
+        -5.0,
+        0.0
+      ],
+      [
+        "s2**2",
+        1.0,
+        1.0
+      ],
+      [
+        "s0*s2",
+        0.0,
+        5.0
+      ]
+    ],
+    "equivalentUpToNullLagrangian": true,
+    "eulerLagrangeResidualOfDifference": "0",
+    "exactMatch": false
+  },
+  {
+    "scenario": "spline_from_0.1pct_noise",
+    "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+    "expected": "4.0*s0**2 - 5.0*s1**2 + s2**2",
+    "coefficientRows": [
+      [
+        "s0**2",
+        4.0,
+        4.0
+      ],
+      [
+        "s1**2",
+        -5.0,
+        0.0
+      ],
+      [
+        "s2**2",
+        1.0,
+        1.0
+      ],
+      [
+        "s0*s2",
+        0.0,
+        5.0
+      ]
+    ],
+    "equivalentUpToNullLagrangian": true,
+    "eulerLagrangeResidualOfDifference": "0",
+    "exactMatch": false
+  },
+  {
+    "scenario": "spline_from_0.5pct_noise",
+    "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+    "expected": "4.0*s0**2 - 5.0*s1**2 + s2**2",
+    "coefficientRows": [
+      [
+        "s0**2",
+        4.0,
+        4.0
+      ],
+      [
+        "s1**2",
+        -5.0,
+        0.0
+      ],
+      [
+        "s2**2",
+        1.0,
+        1.0
+      ],
+      [
+        "s0*s2",
+        0.0,
+        5.0
+      ]
+    ],
+    "equivalentUpToNullLagrangian": true,
+    "eulerLagrangeResidualOfDifference": "0",
+    "exactMatch": false
+  },
+  {
+    "scenario": "spline_from_1pct_noise",
+    "recovered": "9*s0**2/2 + 11*s0*s2/2 + s2**2",
+    "expected": "4.0*s0**2 - 5.0*s1**2 + s2**2",
+    "coefficientRows": [
+      [
+        "s0**2",
+        4.0,
+        4.5
+      ],
+      [
+        "s1**2",
+        -5.0,
+        0.0
+      ],
+      [
+        "s2**2",
+        1.0,
+        1.0
+      ],
+      [
+        "s0*s2",
+        0.0,
+        5.5
+      ]
+    ],
+    "equivalentUpToNullLagrangian": false,
+    "eulerLagrangeResidualOfDifference": "1.0*q0(t) + 1.0*Derivative(q0(t), (t, 2))",
+    "exactMatch": false
+  },
+  {
+    "scenario": "spline_from_3pct_noise",
+    "recovered": "4*s0**2 + 5*s0*s2 + s2**2",
+    "expected": "4.0*s0**2 - 5.0*s1**2 + s2**2",
+    "coefficientRows": [
+      [
+        "s0**2",
+        4.0,
+        4.0
+      ],
+      [
+        "s1**2",
+        -5.0,
+        0.0
+      ],
+      [
+        "s2**2",
+        1.0,
+        1.0
+      ],
+      [
+        "s0*s2",
+        0.0,
+        5.0
+      ]
+    ],
+    "equivalentUpToNullLagrangian": true,
+    "eulerLagrangeResidualOfDifference": "0",
+    "exactMatch": false
+  }
+]

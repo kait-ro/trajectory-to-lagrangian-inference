@@ -1,0 +1,444 @@
+{
+  "noiseLevels": [
+    0.0,
+    0.001,
+    0.003,
+    0.01,
+    0.03,
+    0.1
+  ],
+  "records": [
+    {
+      "noiseLevel": 0.0,
+      "method": "finite_difference",
+      "order": 1,
+      "relativeL2Error": 8.064442531322448e-06
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "finite_difference",
+      "order": 2,
+      "relativeL2Error": 2.376283289968446e-05
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "finite_difference",
+      "order": 3,
+      "relativeL2Error": 4.476298702496603e-05
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "finite_difference",
+      "order": 4,
+      "relativeL2Error": 6.471962467108094e-05
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "savitzky_golay",
+      "order": 1,
+      "relativeL2Error": 2.0544047733187928e-05
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "savitzky_golay",
+      "order": 2,
+      "relativeL2Error": 0.001774581725053074
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "savitzky_golay",
+      "order": 3,
+      "relativeL2Error": 0.0015858915040763803
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "savitzky_golay",
+      "order": 4,
+      "relativeL2Error": 0.06230843411914388
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "smoothing_spline",
+      "order": 1,
+      "relativeL2Error": 7.842309514045853e-05
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "smoothing_spline",
+      "order": 2,
+      "relativeL2Error": 0.0006976458825122631
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "smoothing_spline",
+      "order": 3,
+      "relativeL2Error": 0.005276695389298146
+    },
+    {
+      "noiseLevel": 0.0,
+      "method": "smoothing_spline",
+      "order": 4,
+      "relativeL2Error": 0.03519319813202136
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "finite_difference",
+      "order": 1,
+      "relativeL2Error": 0.13111653028151027
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "finite_difference",
+      "order": 2,
+      "relativeL2Error": 18.03387251344194
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "finite_difference",
+      "order": 3,
+      "relativeL2Error": 2133.414947980283
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "finite_difference",
+      "order": 4,
+      "relativeL2Error": 215627.31528432638
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "savitzky_golay",
+      "order": 1,
+      "relativeL2Error": 0.0007768216947792138
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "savitzky_golay",
+      "order": 2,
+      "relativeL2Error": 0.0037188833245297296
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "savitzky_golay",
+      "order": 3,
+      "relativeL2Error": 0.02525920373664899
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "savitzky_golay",
+      "order": 4,
+      "relativeL2Error": 0.07510476555365918
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "smoothing_spline",
+      "order": 1,
+      "relativeL2Error": 0.00020957446753222897
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "smoothing_spline",
+      "order": 2,
+      "relativeL2Error": 0.0008879536689249736
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "smoothing_spline",
+      "order": 3,
+      "relativeL2Error": 0.005474088281426522
+    },
+    {
+      "noiseLevel": 0.001,
+      "method": "smoothing_spline",
+      "order": 4,
+      "relativeL2Error": 0.035433597971626526
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "finite_difference",
+      "order": 1,
+      "relativeL2Error": 0.3986724870819997
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "finite_difference",
+      "order": 2,
+      "relativeL2Error": 55.18169376272758
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "finite_difference",
+      "order": 3,
+      "relativeL2Error": 6551.3278142464715
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "finite_difference",
+      "order": 4,
+      "relativeL2Error": 663977.7609134545
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "savitzky_golay",
+      "order": 1,
+      "relativeL2Error": 0.002156365910894953
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "savitzky_golay",
+      "order": 2,
+      "relativeL2Error": 0.00894663720732578
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "savitzky_golay",
+      "order": 3,
+      "relativeL2Error": 0.07033600584135338
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "savitzky_golay",
+      "order": 4,
+      "relativeL2Error": 0.12703144000442232
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "smoothing_spline",
+      "order": 1,
+      "relativeL2Error": 0.0020847731794725365
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "smoothing_spline",
+      "order": 2,
+      "relativeL2Error": 0.008647072151044087
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "smoothing_spline",
+      "order": 3,
+      "relativeL2Error": 0.03107122391535353
+    },
+    {
+      "noiseLevel": 0.003,
+      "method": "smoothing_spline",
+      "order": 4,
+      "relativeL2Error": 0.10230313242355184
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "finite_difference",
+      "order": 1,
+      "relativeL2Error": 1.3238126742711727
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "finite_difference",
+      "order": 2,
+      "relativeL2Error": 182.55090340794837
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "finite_difference",
+      "order": 3,
+      "relativeL2Error": 21604.997452946303
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "finite_difference",
+      "order": 4,
+      "relativeL2Error": 2183551.812682011
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "savitzky_golay",
+      "order": 1,
+      "relativeL2Error": 0.007352393628983104
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "savitzky_golay",
+      "order": 2,
+      "relativeL2Error": 0.030237667417391843
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "savitzky_golay",
+      "order": 3,
+      "relativeL2Error": 0.24431536098701512
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "savitzky_golay",
+      "order": 4,
+      "relativeL2Error": 0.3952270822816188
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "smoothing_spline",
+      "order": 1,
+      "relativeL2Error": 0.005389291968845239
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "smoothing_spline",
+      "order": 2,
+      "relativeL2Error": 0.01992715338769485
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "smoothing_spline",
+      "order": 3,
+      "relativeL2Error": 0.06296416756485838
+    },
+    {
+      "noiseLevel": 0.01,
+      "method": "smoothing_spline",
+      "order": 4,
+      "relativeL2Error": 0.17780785058661475
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "finite_difference",
+      "order": 1,
+      "relativeL2Error": 4.012454168535546
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "finite_difference",
+      "order": 2,
+      "relativeL2Error": 556.0197587920846
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "finite_difference",
+      "order": 3,
+      "relativeL2Error": 66123.82516358799
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "finite_difference",
+      "order": 4,
+      "relativeL2Error": 6713515.819977895
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "savitzky_golay",
+      "order": 1,
+      "relativeL2Error": 0.02338303236074031
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "savitzky_golay",
+      "order": 2,
+      "relativeL2Error": 0.09527658692978001
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "savitzky_golay",
+      "order": 3,
+      "relativeL2Error": 0.7938142052935272
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "savitzky_golay",
+      "order": 4,
+      "relativeL2Error": 1.2498266913809726
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "smoothing_spline",
+      "order": 1,
+      "relativeL2Error": 0.010209656998521567
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "smoothing_spline",
+      "order": 2,
+      "relativeL2Error": 0.03756014817376435
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "smoothing_spline",
+      "order": 3,
+      "relativeL2Error": 0.1263734188224829
+    },
+    {
+      "noiseLevel": 0.03,
+      "method": "smoothing_spline",
+      "order": 4,
+      "relativeL2Error": 0.3867779590806628
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "finite_difference",
+      "order": 1,
+      "relativeL2Error": 13.326936908850818
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "finite_difference",
+      "order": 2,
+      "relativeL2Error": 1842.2862086818504
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "finite_difference",
+      "order": 3,
+      "relativeL2Error": 218227.62945333452
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "finite_difference",
+      "order": 4,
+      "relativeL2Error": 22058561.064097594
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "savitzky_golay",
+      "order": 1,
+      "relativeL2Error": 0.0689892721444258
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "savitzky_golay",
+      "order": 2,
+      "relativeL2Error": 0.2837764471986332
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "savitzky_golay",
+      "order": 3,
+      "relativeL2Error": 2.435670852448629
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "savitzky_golay",
+      "order": 4,
+      "relativeL2Error": 3.8484795761136676
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "smoothing_spline",
+      "order": 1,
+      "relativeL2Error": 0.01592694366052107
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "smoothing_spline",
+      "order": 2,
+      "relativeL2Error": 0.03954798502350084
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "smoothing_spline",
+      "order": 3,
+      "relativeL2Error": 0.09449325293969768
+    },
+    {
+      "noiseLevel": 0.1,
+      "method": "smoothing_spline",
+      "order": 4,
+      "relativeL2Error": 0.21447837270069112
+    }
+  ]
+}

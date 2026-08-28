@@ -1,0 +1,27 @@
+{
+  "system": "isotropic_quartic_calibration",
+  "role": "calibration",
+  "lockedTolerances": {
+    "correlationCutoff": 0.1,
+    "residualRmsTolerance": 0.01,
+    "pruneRelativeThreshold": 0.01,
+    "stagnationTolerance": 0.01,
+    "stagnationPatience": 3,
+    "degreeCap": 4
+  },
+  "rows": [
+    {
+      "noiseLevel": 0.0,
+      "success": true,
+      "structurallyEquivalent": true,
+      "equivalenceDetail": "candidates are identical",
+      "missingCount": 0,
+      "spuriousCount": 0,
+      "maxAbsoluteCoefficientError": 3.3306690738754696e-15,
+      "finalScaledResidual": 0.01132076309240083,
+      "missing": [],
+      "spurious": [],
+      "discoveredText": "Discovered Lagrangian (kinetic coefficient fixed at 1):\n  L = v0**2 + v1**2 + v2**2 + v3**2 + v4**2 + v5**2\n    - 1 * (q0**2 + q1**2 + q2**2 + q3**2 + q4**2 + q5**2)\n    - 0.3 * (q0**2*q1**2 + q0**2*q2**2 + q0**2*q3**2 + q0**2*q4**2 + q0**2*q5**2 + q1**2*q2**2 + q1**2*q3**2 + q1**2*q4**2 + q1**2*q5**2 + q2**2*q3**2 + q2**2*q4**2 + q2**2*q5**2 + q3**2*q4**2 + q3**2*q5**2 + q4**2*q5**2)\n    - 0.15 * (q0**4 + q1**4 + q2**4 + q3**4 + q4**4 + q5**4)\n\n  Coefficient snapping (raw -> clean):\n    q0**2: -1.000000 -> -1\n    q1**2: -1.000000 -> -1\n    q2**2: -1.000000 -> -1\n    q3**2: -1.000000 -> -1\n    q4**2: -1.000000 -> -1\n    q5**2: -1.000000 -> -1\n    q0**4: -0.150000 -> -0.15\n    q1**4: -0.150000 -> -0.15\n    q2**4: -0.150000 -> -0.15\n    q3**4: -0.150000 -> -0.15\n    q4**4: -0.150000 -> -0.15\n    q5**4: -0.150000 -> -0.15\n    q0**2*q1**2: -0.300000 -> -0.3\n    q0**2*q2**2: -0.300000 -> -0.3\n    q0**2*q3**2: -0.300000 -> -0.3\n    q0**2*q4**2: -0.300000 -> -0.3\n    q0**2*q5**2: -0.300000 -> -0.3\n    q1**2*q2**2: -0.300000 -> -0.3\n    q1**2*q3**2: -0.300000 -> -0.3\n    q1**2*q4**2: -0.300000 -> -0.3\n    q1**2*q5**2: -0.300000 -> -0.3\n    q2**2*q3**2: -0.300000 -> -0.3\n    q2**2*q4**2: -0.300000 -> -0.3\n    q2**2*q5**2: -0.300000 -> -0.3\n    q3**2*q4**2: -0.300000 -> -0.3\n    q3**2*q5**2: -0.300000 -> -0.3\n    q4**2*q5**2: -0.300000 -> -0.3"
+    }
+  ]
+}

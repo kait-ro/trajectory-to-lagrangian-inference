@@ -1,5 +1,6 @@
-import sympy as sp
+from pathlib import Path
 
+import sympy as sp
 from finding_L.build_matrix import buildGramMatrixChunked
 from finding_L.candidates import buildCandidateLibrary, filterPureVelocityTerms
 from finding_L.gram_forward_select import (
@@ -41,6 +42,7 @@ def runDiscoveryStreaming(
     residualRmsTolerance: float = 0.01,
     stagnationTolerance: float = 0.01,
     stagnationPatience: int = 3,
+    correlationCutoff: float = 0.1,
 ):
     t, coords, vels = defineCoordinates(noCoords)
     kineticTerm = sp.expand(sum(v ** 2 for v in vels))
@@ -89,7 +91,7 @@ def runDiscoveryStreaming(
         )
         bestReserveIndex = reserveIndices[bestLocalIndex]
         selectionLog.append({"round": roundNumber, "bestReserveScore": bestScore, "scaledResidual": scaledResidual})
-        stalled, _ = checkCorrelationCutoff(bestScore)
+        stalled, _ = checkCorrelationCutoff(bestScore, correlationCutoff)
 
         print(
             f"round {roundNumber}: candidate {candidateTerms[bestReserveIndex]}, "
@@ -135,5 +137,6 @@ def runDiscoveryStreaming(
 
 
 if __name__ == "__main__":
-    csvPath = "experiments/data/anharmonic_chain_blind_n6_noise0.csv"
+    srcDir = Path(__file__).resolve().parent.parent
+    csvPath = str(srcDir / "experiments/data/anharmonic_chain_blind_n6_noise0.csv")
     runDiscoveryStreaming(csvPath, noCoords=6, maxRounds=80, chunkRows=120_000, degreeCap=4)
