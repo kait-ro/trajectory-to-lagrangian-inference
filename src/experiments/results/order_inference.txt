@@ -1,0 +1,9 @@
+Lagrangian-order inference from trajectory data
+
+[pais_uhlenbeck]  true order 2  ->  inferred 2  (ok)
+    order 1: scaled residual 0.49832
+    order 2: scaled residual 0.00000  <- satisfies an EL equation
+
+[anharmonic_oscillator]  true order 1  ->  inferred 1  (ok)
+    order 1: scaled residual 0.00000  <- satisfies an EL equation
+

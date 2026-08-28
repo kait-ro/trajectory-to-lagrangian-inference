@@ -71,6 +71,89 @@ def forwardSelectFromGram(gramMatrix, kineticIndex, maxRounds=25):
     return pruneNearZeroCoefficients(gramMatrix, b, activeIndices)
 
 
+def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
+    """How well an order-`lagrangianOrder` Euler-Lagrange equation can explain the data.
+
+    Builds the order-`order` Euler-Lagrange matrix, then measures the least-squares
+    residual of projecting the q^(order)^2 kinetic EL column onto the span of every
+    other EL column: ||EL(kinetic) + design c|| / ||EL(kinetic)||. Small => the data
+    satisfies an order-`order` Euler-Lagrange equation. This is a feasibility test,
+    not a sparse recovery, so no alias filter is applied.
+    """
+    noStateVars = lagrangianOrder + 1
+    library = buildHigherOrderLibrary(noStateVars, libraryMaxDegree)
+    coordinate = sp.Function("q0")(TIME)
+    matrix, _elExpressions = buildEulerLagrangeMatrix(
+        library, coordinate, lagrangianOrder, noStateVars, derivativeColumns
+    )
+    keepMask = matrix.std(axis=0) > 1e-10
+    keptLibrary = [monomial for monomial, keep in zip(library, keepMask) if keep]
+    keptMatrix = matrix[:, keepMask]
+
+    kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[lagrangianOrder] ** 2)
+    if kineticMonomial not in keptLibrary:
+        return 1.0  # the top-derivative-squared term carries no signal here
+    kineticIndex = keptLibrary.index(kineticMonomial)
+
+    kineticColumn = keptMatrix[:, kineticIndex]
+    design = np.delete(keptMatrix, kineticIndex, axis=1)
+    if design.shape[1] == 0:
+        return 1.0
+    coefficients, *_ = np.linalg.lstsq(design, -kineticColumn, rcond=None)
+    residual = np.linalg.norm(design @ coefficients + kineticColumn)
+    return float(residual / max(np.linalg.norm(kineticColumn), 1e-30))
+
+
+def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, convergenceTolerance=None, stagnationTolerance=None):
+    """Infer the Lagrangian order directly from trajectory data.
+
+    Tries orders 1..maxOrder. For each it fixes the q^(order)^2 kinetic term and
+    records the forward-selection scaled residual (same machinery as
+    `recoverHigherOrderLagrangian`). It returns the smallest order whose residual
+    falls below the convergence tolerance (Condition A). If none converge it
+    returns the order at which the residual stopped meaningfully improving
+    (Condition C): a lower order that already explains the data as well as the
+    next one.
+
+    Returns (order, perOrder) where perOrder is a list of
+    {"order", "scaledResidual"} dicts.
+    """
+    convergenceTolerance = (
+        checkResidualToleranceFromGram.__defaults__[0]
+        if convergenceTolerance is None
+        else convergenceTolerance
+    )
+    stagnationTolerance = (
+        checkCorrelationCutoff.__defaults__[0]  # 0.1 relative improvement floor
+        if stagnationTolerance is None
+        else stagnationTolerance
+    )
+
+    perOrder = []
+    for order in range(1, maxOrder + 1):
+        if len(derivativeColumns) < 2 * order + 1:
+            break
+        residual = _orderFitResidual(derivativeColumns[: 2 * order + 1], order, libraryMaxDegree)
+        converged = residual < convergenceTolerance
+        perOrder.append({"order": order, "scaledResidual": residual, "converged": converged})
+        if converged:
+            return order, perOrder
+
+    if not perOrder:
+        raise ValueError("not enough derivative levels to test even order 1")
+
+    # No order satisfies an Euler-Lagrange equation to tolerance. Fall back to
+    # Condition C: the first order after which the residual stops meaningfully
+    # improving -- a lower order that already explains the data as well as the
+    # next one. (The caller can see no entry has converged=True.)
+    for i in range(1, len(perOrder)):
+        earlier = perOrder[i - 1]["scaledResidual"]
+        later = perOrder[i]["scaledResidual"]
+        if earlier > 0 and (earlier - later) / earlier < stagnationTolerance:
+            return perOrder[i - 1]["order"], perOrder
+    return perOrder[-1]["order"], perOrder
+
+
 def recoverHigherOrderLagrangian(
     derivativeColumns,
     noStateVars,
