@@ -339,3 +339,98 @@ sweep for both systems and every Phase 2/3 study; results are identical to the
 PU EOM exact; Ostrogradski H drift 1.04e-10; higher-order recovery still PU-up-to-
 total-derivative; jerk library still fails; ghost verdicts and eigenvalues
 identical; differentiation breakdown table identical.
+
+---
+
+## 2026-08-29 — Items 8–14 (research features)
+
+Append-only. Nothing above this line was changed. New modules: `generation/constraints.py`,
+`finding_L/pipeline.py`, `finding_L/regularized_select.py`. Package `__init__.py`
+added to `generation/`, `finding_L/`, `experiments/`.
+
+### 8. Degenerate Lagrangians / Dirac constraints
+`generation/constraints.py` — canonical `poissonBracket`, `weaklyVanishes` (reduce
+modulo the constraint ideal via a Groebner basis), `classifyConstraints`.
+`ostrogradski_hamiltonian.analyzeDegenerateLagrangian` — when `sp.solve` cannot
+invert the top-momentum relation, it returns a `DegenerateLagrangianResult`
+(primary constraints from the Hessian null space, the `{φ_a, φ_b}` bracket
+matrix, first/second-class classification, `{φ, H}` consistency check flagging a
+secondary constraint) **instead of raising**. `detectGhost` returns
+`ghost=None, degenerate=True` with the constraint analysis attached.
+Verified: `L = q1' q2 − ½q2² − ½q1²` → two second-class constraints, bracket
+`[[0,−1],[1,0]]`; `L = ½q1'² + q1 q2' − …` → one constraint, `{φ,H} ≠ 0` → secondary
+flagged. Dirac-bracket construction is out of scope. `tests/test_constraints.py` (4).
+
+### 9. Two-field mixing testbed
+`experiments/two_field_mixing.py` — `eig(M⁻¹K)` decides the normal-mode spectrum
+(real → oscillatory, negative → runaway); an indefinite mass matrix (`|μ| ≥ 1`,
+eigenvalues `1 ± μ`) forces a negative `ω²`. `buildEulerLagrangeMatrix` generalised
+to `buildMultiFieldElMatrix` (one row-block per field). Recovers the coupled
+**potential** including the off-diagonal `q0 q1` term exactly. The velocity
+(mass-matrix) sector is not recoverable from on-shell data. `tests/test_two_field_mixing.py` (2).
+
+### 10. Multi-coordinate higher-derivative discovery
+`finding_L/higher_order_candidates.py` — `stateGridSymbols`, `multiFieldLibrary`,
+`buildMultiFieldElMatrix`. `higher_order_discovery.recoverMultiFieldHigherOrderLagrangian`
+— isotropic top-derivative kinetic fixed, forward selection recovers the rest.
+On a position-coupled Pais–Uhlenbeck chain (2 and 3 fields) it recovers the
+Lagrangian up to a total derivative **with the cross-field coupling coefficient
+exact** on clean data and under direct column perturbation; the
+noisy-position → spline path fails (multi-field higher-order differentiation).
+`experiments/multi_field_discovery_validation.py`, `tests/test_multi_field_discovery.py` (4).
+
+### 11. Automatic Lagrangian-order inference
+`higher_order_discovery.inferLagrangianOrder` — for orders 1..maxOrder, measures
+the least-squares residual of projecting the `q^(n)²` kinetic EL column onto the
+other EL columns (a feasibility test for an order-`n` Euler-Lagrange equation).
+Smallest order below tolerance (Condition A), else where the residual stopped
+improving (Condition C). Infers PU → order 2, anharmonic oscillator → order 1.
+A purely linear order-1 system (SHO) is a degenerate case (`EL(q'²) ∝ EL(q²)`),
+documented. `experiments/order_inference_validation.py`, `tests/test_order_inference.py` (3).
+
+### 12. End-to-end pipeline on noisy positions only
+`finding_L/pipeline.endToEndPipeline(noisyPositions, dt)` — grid-searches the
+differentiation methods (Savitzky–Golay, SG poly-8, quintic spline), infers the
+order, recovers the Lagrangian, runs the ghost verdict, and returns **separate**
+order / ghost / coefficient confidences. Method selection is unsupervised: among
+plausible recoveries (no absurd coefficients) pick the lowest own-EL residual.
+No step is given ground-truth derivatives. On PU: order 2 and ghost True with full
+cross-method agreement through ≥ 1% noise; coefficients drift (reported as low
+coefficient confidence). `recoverHigherOrderLagrangian` gained a `kineticLevel`
+param so order 1 works. `experiments/end_to_end_pipeline_validation.py`, `tests/test_pipeline.py` (3).
+
+### 13. ROC-style ghost-detection validation
+`ghost_detection_validation.rocReport` — a labelled battery (3 healthy + 4 ghost
+single-coordinate systems, plus a degenerate borderline case), run through the
+end-to-end pipeline over a noise sweep with multiple seeds. Reports false-positive,
+false-negative and undetermined rates. **FP = FN = 0** across 0–1% noise; the
+undetermined rate rises 0.38 → 0.57 (nonlinear recovered `H`, or noise-degraded
+structure). The degenerate system is correctly flagged, not scored.
+`tests/test_ghost_roc.py` (4).
+
+### 14. Regularisation-path model selection (additive)
+`finding_L/regularized_select.py` — `sequentialThresholdedLeastSquares` (SINDy
+STLSQ) and `lassoSelect` (coordinate-descent LASSO path + debiased refit), **both
+from the Gram matrix** (no `Θ`, no new dependency). `experiments/model_selection_comparison.py`
+runs all three selectors on one degree-4 streaming Gram per system/noise.
+
+**Finding — the ~1–2% ceiling is the greedy selector, not OLS recovery.** On both
+benchmark systems (one seed per level):
+
+| noise | greedy | STLSQ | debiased LASSO |
+|---|---|---|---|
+| 1% | exact | exact | exact |
+| 2% | failed (7/19, 6/6) | **exact** | **exact** |
+| 5% | failed | 0 miss / ~10 spurious | **exact** |
+
+The production path (`main_streaming` → `gram_forward_select`) is unchanged.
+LASSO is a strong replacement candidate; a switch should first be validated over
+more seeds / systems / the streaming degree-expanding path. `tests/test_regularized_select.py` (4).
+
+### Effect on earlier results
+Items 8–14 add modules and one parameter (`recoverHigherOrderLagrangian(kineticLevel=…)`,
+default `min(2, order)` = the previous hard-coded 2 for orders ≥ 2). The Phase 1
+noise sweep, `pu_oscillator_validation`, `differentiation_method_study`,
+`higher_order_discovery_validation`, `jerk_snap_distractor_study` and the
+`ghost_detection_validation` reference/noise-boundary sections are unchanged.
+Test count 19 → 43.

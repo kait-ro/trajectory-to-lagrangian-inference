@@ -75,8 +75,8 @@ threshold and refits.
 
 *Why greedy:* the full best-subset problem is combinatorial; greedy forward
 selection with a correlation score is cheap and, in the clean-data regime,
-exact. Its failure mode under noise is documented in
-[`PROJECT.md`](PROJECT.md#a-the-12--measurement-noise-ceiling-is-structural-not-a-tolerance-bug).
+exact. Its failure mode under noise — and the regularisation-path selectors that
+do better — are in [`PROJECT.md`](PROJECT.md) problem A.
 
 Full algorithm, scoring formula, stopping conditions and the tolerance table:
 [`ForwardSelection.md`](ForwardSelection.md).
@@ -134,8 +134,8 @@ Same shape as steps 2–5, single-coordinate, with an explicit Lagrangian order:
 Noisy derivatives come from `generation/numerical_diff.py`; the quintic smoothing
 spline is the only method that survives to 3rd/4th order.
 
-*Why single-coordinate for now:* the candidate-library and EL-column code is not
-yet generalised to multiple coupled higher-derivative fields (roadmap item 10).
+The multi-field generalisation (section 10) and automatic order inference
+(section 10) build on this same machinery.
 
 ## 8. Ghost detection — `generation/ghost_detection.py`
 
@@ -157,3 +157,54 @@ term in `H` for a non-degenerate higher-derivative theory, which makes `H`
 unbounded below; the oscillatory-dynamics condition rules out the trivial
 unbounded-but-harmless runaway case. The verdict is invariant under the
 total-derivative freedom from step 6.
+
+## 9. Degenerate Lagrangians — `generation/constraints.py`
+
+When `ostrogradskiHamiltonian` cannot invert `p_n = ∂L/∂q^(n)` for `q^(n)` (the
+Lagrangian is degenerate), it returns a `DegenerateLagrangianResult` instead of a
+Hamiltonian dict:
+
+1. Primary constraints come from the null space of the Hessian
+   `W_ab = ∂²L/∂q_a^(n) ∂q_b^(n)`: each null vector `v` gives a phase-space
+   relation `Σ_a v_a (P_a − ∂L/∂q_a^(n)) = 0` (the `q^(n)` parts cancel because
+   `W v = 0`).
+2. `classifyConstraints` builds the canonical Poisson-bracket matrix
+   `C_ab = {φ_a, φ_b}`. A constraint whose whole row of `C` vanishes *weakly*
+   (modulo the constraint ideal — checked with a Gröbner reduction) is
+   first-class; otherwise second-class.
+3. For a first-class candidate, `{φ_a, H}` is also tested weakly. If it does not
+   vanish, consistency requires a secondary constraint — flagged, not computed.
+
+*Why stop here:* first/second-class classification already tells you the physical
+phase-space dimension and whether there is gauge freedom. Dirac-bracket
+construction and the full Dirac–Bergmann iteration are a separate, larger job.
+
+## 10. Multi-field and order-inferring recovery — `finding_L/higher_order_*.py`
+
+- `buildMultiFieldElMatrix` stacks one row-block per field (rows = timepoints ×
+  fields), exactly as the 2nd-order streaming path stacks per-coordinate blocks.
+  `recoverMultiFieldHigherOrderLagrangian` fixes the isotropic top-derivative
+  kinetic `Σ_i (q_i^(n))²` and forward-selects the rest, including cross-field
+  coupling monomials.
+- `inferLagrangianOrder` tries orders `1..maxOrder`; for each it measures the
+  least-squares residual of projecting the `q^(n)²` kinetic EL column onto the
+  span of the other EL columns (a feasibility test: does the data satisfy an
+  order-`n` Euler–Lagrange equation?). Smallest order below tolerance
+  (Condition A), else the order after which the residual stops improving
+  (Condition C).
+
+## 11. End-to-end pipeline — `finding_L/pipeline.py`
+
+`endToEndPipeline(noisyPositions, dt)` chains the pieces with no ground-truth
+input:
+
+1. For each differentiation method (Savitzky–Golay, SG poly-8, quintic spline):
+   estimate derivatives → `inferLagrangianOrder` → `recoverHigherOrderLagrangian`
+   → `detectGhost`, and record the recovered Lagrangian's *own* Euler–Lagrange
+   residual on that method's derivatives.
+2. Consensus order = majority vote. Selection = among recoveries with plausible
+   (not absurdly large) coefficients, the lowest own-EL residual.
+3. Three confidences: **order** (cross-method agreement), **ghost** (agreement on
+   the verdict), **coefficient** (spread across methods + plausibility). Overall
+   confidence is the order/ghost minimum — the robust part; coefficients are
+   reported separately because the differentiation step limits them.

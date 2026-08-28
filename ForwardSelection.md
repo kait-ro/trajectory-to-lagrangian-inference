@@ -119,3 +119,23 @@ property of the estimator, not the thresholds; the frozen tolerances make the
 failure reproducible and the equivalence-class gate makes it detected. A
 regularisation-path / errors-in-variables alternative is roadmap item 14. See
 [`PROJECT.md`](PROJECT.md) problem A.
+
+## Alternative selectors — `finding_L/regularized_select.py` (additive)
+
+Two regularisation-path selectors solve the same Gram-only problem, as a
+comparison to the greedy path (never a silent replacement):
+
+- **`sequentialThresholdedLeastSquares`** (SINDy STLSQ): start from the full
+  least-squares fit `G c = b`, zero the coefficients below
+  `relativeThreshold · max|c|`, refit on the survivors, iterate to a fixed point.
+- **`lassoSelect`**: a coordinate-descent LASSO path from `G` and `b` (minimising
+  `½ cᵀG c − bᵀc + λ‖c‖₁` over a geometric λ sequence), then pick the sparsest
+  solution whose refit residual is within 5 % of the densest, then hard-threshold
+  and refit (debiased LASSO).
+
+`experiments/model_selection_comparison.py` runs all three on one degree-4
+streaming Gram per system/noise. **Result:** greedy fails from ~2 % noise; STLSQ
+holds to ~2 %; the debiased LASSO path recovers both benchmark systems exactly
+through ~5 % noise. So the ~1–2 % ceiling (PROJECT.md problem A) is a property of
+the *greedy selector*, not of least-squares Lagrangian recovery. The production
+path is unchanged pending wider validation.

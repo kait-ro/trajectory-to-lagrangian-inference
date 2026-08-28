@@ -54,32 +54,59 @@ the higher-derivative validation studies.
   + oscillatory dynamics. Stable to ≥ 35 % noise on a data-recovered PU
   Lagrangian — conditional on correct order identification.
 
+### Higher-derivative track — multi-field, order-inferring, end-to-end
+
+- **Multi-coordinate recovery** (`recoverMultiFieldHigherOrderLagrangian`):
+  recovers a position-coupled Pais–Uhlenbeck chain (2–3 fields) up to a total
+  derivative on clean data, cross-field coupling coefficient exact.
+- **Order inference** (`inferLagrangianOrder`): infers the Lagrangian order from
+  data (PU → 2, anharmonic oscillator → 1) by testing successive orders against
+  an Euler–Lagrange feasibility residual.
+- **End-to-end pipeline** (`finding_L/pipeline.endToEndPipeline`): noisy
+  positions only → differentiation-method grid-search → order inference →
+  recovery → ghost verdict, with separate order / ghost / coefficient
+  confidences.
+
+### Constrained-Hamiltonian analysis
+
+`generation/constraints.py` + `ostrogradskiHamiltonian` detect a degenerate
+(non-invertible) Lagrangian, extract the primary constraints, and classify them
+first- / second-class via the canonical Poisson bracket. `detectGhost` reports
+degeneracy instead of crashing. Stops before Dirac-bracket reduction.
+
 ### Tests
 
-`tests/` (`uv run pytest`, 19): EL / Ostrogradski Hamiltonian vs closed form,
-PU EOM + Hamiltonian conservation, the equivalence-class classifier both ways,
-forward selection on a synthetic Gram matrix, and the frozen-tolerance
-discipline.
+`tests/` (`uv run pytest`, 43): EL / Ostrogradski Hamiltonian vs closed form,
+PU EOM + Hamiltonian conservation, the equivalence-class classifier, forward
+selection and STLSQ/LASSO on synthetic Gram matrices, the frozen-tolerance
+discipline, degenerate-constraint classification, two-field mixing, multi-field
+higher-order recovery, order inference, the end-to-end pipeline, and the ghost
+ROC battery.
 
 ## Open problems
 
-### A. The ~1–2 % measurement-noise ceiling is structural, not a tolerance bug
+### A. The ~1–2 % measurement-noise ceiling is the *greedy selector*, not OLS recovery
 
-At ≥ 2–3 % position noise the pipeline fills with spurious velocity-dependent
-degree-4 terms (`q_i² q̇_i²`, `q_i q_j q̇_i q̇_j`) and the quadratic coefficients
-are biased ~30–50 % high. These terms are **genuinely well-correlated** with the
-noise-corrupted residual — their EL columns are not linearly dependent on the
-true terms' columns, so no dependency filter removes them, and their correlation
-score (~0.15–0.25) sits above any cutoff that still admits the real cubic terms
-(~0.13–0.20). Greedy forward selection against on-shell data cannot separate
-them.
+At ≥ 2 % position noise the **greedy forward-selection** path fills with spurious
+velocity-dependent degree-4 terms (`q_i² q̇_i²`, `q_i q_j q̇_i q̇_j`): these are
+genuinely well-correlated with the noise-corrupted residual, and greedy commits
+to them before the true cubics. This was thought to be structural.
 
-**Direction of a real fix:** replace greedy forward selection + sequential
-thresholding with an **errors-in-variables** sparse regression — the EL columns
-are all built from noisy `q, q̇, q̈`, so ordinary least squares is biased. A
-total-least-squares or SINDy-with-measurement-error formulation, with a
-regularisation path chosen by cross-validation on held-out *trajectories*, is the
-right tool. This is a design change to the estimator (tracked as item 14).
+**Item 14 shows it is not.** A regularisation-path selector (`finding_L/regularized_select.py`),
+run on the *same* Gram matrix, does much better:
+
+| noise | greedy | STLSQ | debiased LASSO |
+|---|---|---|---|
+| 1 % | exact | exact | exact |
+| 2 % | fails (7/19 spurious) | exact | exact |
+| 5 % | fails | ~10 spurious | **exact, both benchmark systems** |
+
+Starting from the full least-squares fit and thresholding down (rather than
+adding terms greedily) recovers the true sparse Lagrangian through ~5 % noise. An
+errors-in-variables formulation would still be the principled endpoint (the EL
+columns are all built from noisy derivatives), but the debiased LASSO path is a
+strong, cheap improvement that is available now. The production path is
+unchanged pending a wider validation (`experiments/model_selection_comparison.py`).
 
 ### B. Jerk/snap libraries fail via on-shell EOM degeneracy
 
@@ -100,20 +127,37 @@ Even at 0 noise the last coordinate `q5` of the open chain is mis-recovered (a
 correlates with the residual better than the true quartic once the other `q5`
 terms carry small errors. The interior 5 sites recover exactly.
 
-### D. Model order and state-variable count are still hand-specified
+### D. Noisy multi-field higher-order differentiation
 
-The higher-derivative discovery scripts hardcode `LAGRANGIAN_ORDER` and
-`NO_STATE_VARS`. Inferring the order from data is item 11.
+Multi-field higher-derivative recovery is exact on clean data but the
+noisy-positions → spline-derivatives step collapses well before the
+single-field case does — each Euler–Lagrange column mixes several fields'
+derivative levels. Better differentiation, not a better recovery, is the gap.
 
-## Roadmap (items 8–14, not yet started)
+### E. `detectGhost` only handles quadratic Hamiltonians
 
-8. Degenerate-Lagrangian (Dirac constraint) detection + first/second-class
-   classification in `ostrogradski_hamiltonian`.
-9. Two-coordinate mixing testbed with an explicit mass matrix.
-10. Multi-coordinate higher-order discovery.
-11. Automatic Lagrangian-order inference from data.
-12. End-to-end pipeline on noisy position-only data (differentiation choice →
-    discovery → ghost verdict → uncertainty).
-13. ROC-style ghost-detection validation over a battery of systems and noise.
-14. Regularisation-path / SINDy model selection as an additive comparison to the
-    current greedy forward selection.
+A recovered Lagrangian with a spurious `q² q̇²` term (or a genuinely nonlinear
+system) gives a non-quadratic `H`; `detectGhost` returns `ghost=None`
+("needs nonlinear boundedness analysis") rather than a verdict. In the ROC
+battery this shows up as a rising "undetermined" rate under noise — safe (no
+false alarms) but incomplete.
+
+### F. Linear order-1 systems are degenerate for order inference
+
+For a purely linear order-1 system (a harmonic oscillator), `EL(q̇²) ∝ EL(q²)`
+exactly on-shell, so `inferLagrangianOrder`'s feasibility residual for order 1 is
+trivially zero and the method still returns 1 — correct, but by a degenerate
+route. Nonlinear order-1 systems (with a large enough library) infer cleanly.
+
+## Roadmap
+
+Items 8–14 are implemented (see `src/REPORT.md`, 2026-08-29). Next candidates:
+
+- Errors-in-variables / total-least-squares Lagrangian recovery (the principled
+  endpoint of problem A).
+- Wider validation of the debiased LASSO path, then a possible switch of the
+  production default.
+- Off-manifold data generation to lift the on-shell degeneracy (problems B, D).
+- A boundedness test for non-quadratic Hamiltonians (problem E).
+- Multi-field extension of the end-to-end pipeline once multi-field
+  differentiation improves.

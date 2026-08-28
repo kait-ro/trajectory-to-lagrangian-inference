@@ -6,14 +6,14 @@ higher-derivative (Ostrogradski) extension, and Ostrogradski-ghost detection.
 
 ## Layout
 
-`src/` is a path-entry set of packages — there is no installable package
-(`[tool.uv] package = false`), so everything runs from `src/`.
+`src/` holds three packages (each with an `__init__.py`); there is no installable
+distribution (`[tool.uv] package = false`), so everything runs from `src/`.
 
 | package | contents |
 |---|---|
-| `generation/` | `eqnofmotion` (symbolic EOM), `integrator` / `higher_order_integrator` (RK4), `generate_data` + `noise` (dataset streaming), `ostrogradski` + `ostrogradski_hamiltonian`, `ghost_detection`, `numerical_diff` |
-| `finding_L/`  | `candidates` / `higher_order_candidates` (libraries), `build_matrix` (streaming Gram), `gram_forward_select` + `stopping_conditions` (selection), `main_streaming` + `higher_order_discovery` (drivers), `report` (readable output), `equivalence_class` (null-Lagrangian classifier) |
-| `experiments/` | `systems` + `pu_system` (benchmarks), `generate_dataset`, `discovery` (frozen-tolerance policy + comparison), and the runnable studies below |
+| `generation/` | `eqnofmotion` (symbolic EOM), `integrator` / `higher_order_integrator` (RK4), `generate_data` + `noise` (dataset streaming), `ostrogradski` + `ostrogradski_hamiltonian`, `constraints` (Dirac/Poisson), `ghost_detection`, `numerical_diff` |
+| `finding_L/`  | `candidates` / `higher_order_candidates` (libraries, incl. multi-field), `build_matrix` (streaming Gram), `gram_forward_select` + `stopping_conditions` + `regularized_select` (STLSQ/LASSO), `main_streaming` + `higher_order_discovery` + `pipeline` (drivers), `report`, `equivalence_class` |
+| `experiments/` | `systems` + `pu_system` (benchmarks), `generate_dataset`, `discovery` (frozen-tolerance policy), and the runnable studies below |
 
 ## Dependencies
 
@@ -44,9 +44,18 @@ $PY -m experiments.pu_oscillator_validation        # Ostrogradski EL + Hamiltoni
 $PY -m experiments.differentiation_method_study    # noisy higher-order differentiation
 $PY -m experiments.higher_order_discovery_validation
 $PY -m experiments.jerk_snap_distractor_study
+$PY -m experiments.two_field_mixing                # mass-matrix spectrum + 2-field recovery
+$PY -m experiments.multi_field_discovery_validation   # coupled Pais-Uhlenbeck chain
+$PY -m experiments.order_inference_validation      # infer the Lagrangian order from data
 
 # 5. ghost detection
-$PY -m experiments.ghost_detection_validation      # ghost verdict vs noise
+$PY -m experiments.ghost_detection_validation      # symbolic checks, noise boundary, ROC battery
+
+# 6. end-to-end (noisy positions -> L + ghost verdict + confidence)
+$PY -m experiments.end_to_end_pipeline_validation
+
+# 7. model selection: greedy vs STLSQ vs LASSO (additive comparison)
+$PY -m experiments.model_selection_comparison
 ```
 
 Each study writes `.txt` / `.json` (and some `.png`) into `src/experiments/results/`.
