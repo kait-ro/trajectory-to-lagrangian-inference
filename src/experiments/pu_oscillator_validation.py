@@ -1,6 +1,5 @@
 import numpy as np
 import sympy as sp
-
 from experiments.pu_system import OMEGA1, OMEGA2, paisUhlenbeckLagrangian
 from generation.eqnofmotion import EulerLagrangeEqn, defineCoordinates
 from generation.higher_order_integrator import simulateHigherOrderTrajectory
@@ -10,11 +9,14 @@ from generation.ostrogradski import (
     eulerLagrangeExpression,
     lagrangianOrder,
 )
-from generation.ostrogradski_hamiltonian import hamiltonianOnTrajectory, ostrogradskiHamiltonian
+from generation.ostrogradski_hamiltonian import (
+    hamiltonianOnTrajectory,
+    ostrogradskiHamiltonian,
+)
 
 
 def regressionAgainstSecondOrder():
-    t, coords, vels = defineCoordinates(2)
+    _t, coords, vels = defineCoordinates(2)
     lagrangian = sp.Rational(1, 2) * sum(v ** 2 for v in vels) - sp.Rational(1, 2) * sum(q ** 2 for q in coords) - sp.Rational(1, 10) * coords[0] ** 2 * coords[1] ** 2
 
     existing = list(EulerLagrangeEqn(lagrangian, coords, vels))
@@ -24,7 +26,7 @@ def regressionAgainstSecondOrder():
 
 
 def paisUhlenbeckEquationOfMotion():
-    t, coords, vels = defineCoordinates(1)
+    _t, coords, _vels = defineCoordinates(1)
     coordinate = coords[0]
     lagrangian = paisUhlenbeckLagrangian(coordinate)
 
@@ -40,7 +42,7 @@ def paisUhlenbeckEquationOfMotion():
 
 
 def integratePaisUhlenbeck(omega1, omega2, dt, steps, initialState):
-    t, coords, vels = defineCoordinates(1)
+    _t, coords, _vels = defineCoordinates(1)
     lagrangian = paisUhlenbeckLagrangian(coords[0])
     constants = {OMEGA1: omega1, OMEGA2: omega2}
 
@@ -48,7 +50,7 @@ def integratePaisUhlenbeck(omega1, omega2, dt, steps, initialState):
     times, perDerivative = simulateHigherOrderTrajectory(initialState, stateDerivative, dt, steps, equationOrder, noCoords)
 
     hamiltonianData = ostrogradskiHamiltonian(lagrangian, coords)
-    derivativeArrays = [column for column in perDerivative]
+    derivativeArrays = list(perDerivative)
     hamiltonianSeries = hamiltonianOnTrajectory(hamiltonianData, coords, constants, derivativeArrays)
 
     return times, perDerivative, hamiltonianData, hamiltonianSeries, lagrangian, coords, constants
@@ -85,7 +87,7 @@ def run():
     omega1, omega2 = 1.0, 2.0
     dt, steps = 0.005, 24000
     initialState = [1.0, 0.0, 0.0, 0.0]
-    times, perDerivative, hamiltonianData, hamiltonianSeries, lagrangian, coords, constants = integratePaisUhlenbeck(
+    _times, perDerivative, hamiltonianData, hamiltonianSeries, _lagrangian, _coords, _constants = integratePaisUhlenbeck(
         omega1, omega2, dt, steps, initialState
     )
 
