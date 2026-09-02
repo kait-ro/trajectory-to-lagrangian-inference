@@ -1,19 +1,20 @@
 import argparse
 import os
+from pathlib import Path
 
 import numpy as np
-
 from experiments.systems import SYSTEMS
 from generation.eqnofmotion import defineCoordinates
 from generation.generate_data import generateDatasetStreaming
 from generation.integrator import GetAccelFunctions
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+ASSETS_DIR = str(Path(__file__).resolve().parents[2] / "assets")
 DEFAULT_SEED = 20260828
 
 
-def datasetPath(system, noisePercentage):
-    return os.path.join(DATA_DIR, f"{system.datasetStem()}_noise{int(round(noisePercentage * 100))}.csv")
+def datasetPath(system, noisePercentage, seed=None):
+    suffix = f"_seed{seed}" if seed is not None and seed != DEFAULT_SEED else ""
+    return os.path.join(ASSETS_DIR, f"{system.datasetStem()}_noise{round(noisePercentage * 100)}{suffix}.csv")
 
 
 def generateSystemDatasets(systemName, noiseLevels=None, overwrite=False, seed=DEFAULT_SEED):
@@ -24,10 +25,10 @@ def generateSystemDatasets(systemName, noiseLevels=None, overwrite=False, seed=D
     lagrangian, constants = system.buildLagrangian(coords, vels)
     accelFunctions = GetAccelFunctions(lagrangian, coords, vels, t, constants)
 
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(ASSETS_DIR, exist_ok=True)
     producedPaths = []
     for noisePercentage in requestedLevels:
-        outputPath = datasetPath(system, noisePercentage)
+        outputPath = datasetPath(system, noisePercentage, seed)
         if os.path.exists(outputPath) and not overwrite:
             producedPaths.append(outputPath)
             continue
