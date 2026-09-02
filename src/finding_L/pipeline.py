@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import sympy as sp
-
 from finding_L.higher_order_discovery import (
     inferLagrangianOrder,
     recoverHigherOrderLagrangian,
@@ -10,16 +9,21 @@ from finding_L.higher_order_discovery import (
 )
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ghost_detection import detectGhost
-from generation.ostrogradski import eulerLagrangeExpression
 from generation.numerical_diff import (
     savitzkyGolayDerivatives,
     smoothingSplineDerivatives,
 )
+from generation.ostrogradski import eulerLagrangeExpression
+
+
+def _savitzkyGolayPoly8(signal, dt, maxOrder):
+    return savitzkyGolayDerivatives(signal, dt, maxOrder, polyOrder=8)
+
 
 _METHODS = {
     "savitzky_golay": savitzkyGolayDerivatives,
     "smoothing_spline": smoothingSplineDerivatives,
-    "savitzky_golay_poly8": lambda signal, dt, maxOrder: savitzkyGolayDerivatives(signal, dt, maxOrder, polyOrder=8),
+    "savitzky_golay_poly8": _savitzkyGolayPoly8,
 }
 
 
@@ -58,7 +62,7 @@ class PipelineResult:
         if self.coefficientSpread:
             lines.append("coefficient spread across methods (std):")
             for monomial, spread in sorted(self.coefficientSpread.items(), key=lambda kv: -kv[1]):
-                lines.append(f"  {str(monomial):>14}: {spread:.4f}")
+                lines.append(f"  {monomial!s:>14}: {spread:.4f}")
         lines.append(self.detail)
         return "\n".join(lines)
 
@@ -112,7 +116,7 @@ def _recoverAndDiagnose(columns, maxOrder, libraryMaxDegree):
         verdict = detectGhost(lagrangianInCoords, coords, order=order)
         ghost = verdict.get("ghost")
         ghostDetail = verdict.get("detail", "")
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001
         ghost, ghostDetail = None, f"ghost analysis failed: {error}"
 
     return {
