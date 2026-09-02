@@ -3,9 +3,12 @@ import os
 
 import numpy as np
 import sympy as sp
-
+from experiments.artifacts import RESULTS_DIR
 from experiments.pu_system import groundTruthColumns, paisUhlenbeckStateLagrangian
-from finding_L.higher_order_discovery import recoverHigherOrderLagrangian, stateToCoordinate
+from finding_L.higher_order_discovery import (
+    recoverHigherOrderLagrangian,
+    stateToCoordinate,
+)
 from finding_L.pipeline import endToEndPipeline
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ghost_detection import detectGhost
@@ -13,7 +16,6 @@ from generation.higher_order_integrator import simulateHigherOrderTrajectory
 from generation.numerical_diff import smoothingSplineDerivatives
 from generation.ostrogradski import buildStateDerivative
 
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 NO_STATE_VARS = 3
 LAGRANGIAN_ORDER = 2
 
@@ -23,10 +25,9 @@ def _stateToCoordinate(stateExpression, coordinate):
 
 
 def referenceSystems():
-    t, coords, vels = defineCoordinates(1)
+    _t, coords, _vels = defineCoordinates(1)
     coordinate = coords[0]
     velocity = sp.diff(coordinate, TIME)
-    acceleration = sp.diff(coordinate, TIME, 2)
 
     healthyOscillator = sp.Rational(1, 2) * velocity ** 2 - sp.Rational(1, 2) * 4 * coordinate ** 2
     paisUhlenbeck = _stateToCoordinate(paisUhlenbeckStateLagrangian(NO_STATE_VARS, 1.0, 2.0), coordinate)
@@ -120,7 +121,6 @@ def _ghostBattery():
     _t, coords, _v = defineCoordinates(1)
     q = coords[0]
     v = sp.diff(q, TIME)
-    a = sp.diff(q, TIME, 2)
     systems = []
 
     systems.append(("sho_w1", "healthy", sp.Rational(1, 2) * v ** 2 - sp.Rational(1, 2) * q ** 2))
