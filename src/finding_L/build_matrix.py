@@ -85,3 +85,29 @@ def buildGramMatrixChunked(
             colSum += thetaChunk.sum(axis=0)
             G += thetaChunk.T @ thetaChunk
     return n, colSum, G
+
+
+def buildAdmissibleGram(
+    candidateTerms: list,
+    coords: list,
+    vels: list,
+    t: sp.Symbol,
+    csvPath: str,
+    noCoords: int,
+    kineticTerm: sp.Expr,
+    chunkRows: int = 200_000,
+    lambdifiedCache: dict | None = None,
+    varianceFloor: float = 1e-12,
+):
+    n, colSum, G = buildGramMatrixChunked(
+        candidateTerms, coords, vels, t, csvPath, noCoords, chunkRows, lambdifiedCache=lambdifiedCache
+    )
+    kineticIndex = candidateTerms.index(kineticTerm)
+    variance = G.diagonal() / n - (colSum / n) ** 2
+    admissible = [
+        index for index in range(len(candidateTerms))
+        if variance[index] > varianceFloor or index == kineticIndex
+    ]
+    subGram = G[np.ix_(admissible, admissible)]
+    subTerms = [candidateTerms[index] for index in admissible]
+    return subGram, subTerms, admissible.index(kineticIndex), n
