@@ -1,10 +1,11 @@
+"""Pais–Uhlenbeck trajectory generators and multi-field ground-truth data for higher-order dynamics."""
+
 import numpy as np
 import sympy as sp
-
+from finding_L.higher_order_candidates import stateGridSymbols, stateVariableSymbols
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.higher_order_integrator import simulateHigherOrderTrajectory
 from generation.ostrogradski import buildStateDerivative
-from finding_L.higher_order_candidates import stateGridSymbols, stateVariableSymbols
 
 OMEGA1, OMEGA2 = sp.symbols("omega1 omega2", positive=True)
 
@@ -104,3 +105,4 @@ def multiFieldGroundTruthColumns(
         higher = -(omega1 ** 2 + omega2 ** 2) * columns[-2] - omega1 ** 2 * omega2 ** 2 * columns[-4]
         columns.append(higher)
     return dt, columns[: maxLevel + 1]
+
