@@ -6,6 +6,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from experiments.artifacts import RESULTS_DIR
+from experiments.pu_system import groundTruthTrajectory
 from generation.numerical_diff import (
     finiteDifferenceDerivatives,
     relativeL2Error,
@@ -13,9 +15,6 @@ from generation.numerical_diff import (
     smoothingSplineDerivatives,
 )
 
-from experiments.pu_system import groundTruthTrajectory
-
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 MAX_ORDER = 4
 NOISE_LEVELS = [0.0, 0.001, 0.003, 0.01, 0.03, 0.1]
 BREAKDOWN_THRESHOLD = 0.5
