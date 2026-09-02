@@ -1,5 +1,4 @@
 import sympy as sp
-
 from experiments.ghost_detection_validation import _ghostBattery, rocReport
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ghost_detection import detectGhost
@@ -17,13 +16,15 @@ def test_no_false_positives_or_negatives_on_clean_data():
     assert stats["falseNegativeRate"] == 0.0
 
 
-def test_degenerate_system_is_flagged_not_scored():
+def test_fully_second_class_degenerate_system_gets_a_real_verdict():
     _t, coords, _v = defineCoordinates(2)
     q1, q2 = coords
     degenerate = sp.diff(q1, TIME) * q2 - sp.Rational(1, 2) * q2 ** 2 - sp.Rational(1, 2) * q1 ** 2
     verdict = detectGhost(degenerate, coords)
     assert verdict["degenerate"] is True
-    assert verdict["ghost"] is None
+    assert verdict["chainClosed"] is True
+    assert verdict["ghost"] is False
+    assert verdict["reducedHamiltonian"] is not None
 
 
 def test_healthy_quadratic_oscillator_is_not_a_ghost():
