@@ -121,13 +121,6 @@ class DiscoveredLagrangian:
     contributions: list = field(default_factory=list)
     text: str = ""
 
-    @property
-    def activeContributions(self):
-        return [contribution for contribution in self.contributions if contribution.snappedCoefficient != 0]
-
-    def functionalExpression(self, coords, vels):
-        return stateExpressionToFunctional(self.expression, coords, vels)
-
 
 def groupContributionsByCoefficient(contributions, generators):
     grouped = {}
