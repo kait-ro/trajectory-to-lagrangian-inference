@@ -1,7 +1,6 @@
-import itertools
-
 import numpy as np
 import sympy as sp
+from finding_L.candidates import monomialLibrary
 from generation.eqnofmotion import defineCoordinates
 from generation.ostrogradski import TIME, eulerLagrangeExpression
 
@@ -11,20 +10,7 @@ def stateVariableSymbols(noStateVars):
 
 
 def buildHigherOrderLibrary(noStateVars, maxDegree):
-    variables = stateVariableSymbols(noStateVars)
-    library = []
-    seenExponents = set()
-    for degree in range(1, maxDegree + 1):
-        for combo in itertools.combinations_with_replacement(range(noStateVars), degree):
-            exponents = tuple(sorted(combo))
-            if exponents in seenExponents:
-                continue
-            seenExponents.add(exponents)
-            monomial = sp.Integer(1)
-            for index in combo:
-                monomial = monomial * variables[index]
-            library.append(sp.expand(monomial))
-    return library
+    return monomialLibrary(stateVariableSymbols(noStateVars), maxDegree)
 
 
 def monomialToCoordinate(monomial, coordinate, noStateVars):
@@ -100,19 +86,7 @@ def stateGridSymbols(noFields, lagrangianOrder):
 
 def multiFieldLibrary(noFields, lagrangianOrder, maxDegree):
     flat = [symbol for row in stateGridSymbols(noFields, lagrangianOrder) for symbol in row]
-    library = []
-    seen = set()
-    for degree in range(1, maxDegree + 1):
-        for combo in itertools.combinations_with_replacement(range(len(flat)), degree):
-            key = tuple(sorted(combo))
-            if key in seen:
-                continue
-            seen.add(key)
-            monomial = sp.Integer(1)
-            for index in combo:
-                monomial *= flat[index]
-            library.append(sp.expand(monomial))
-    return library
+    return monomialLibrary(flat, maxDegree)
 
 
 def multiFieldMonomialToCoordinates(monomial, coords, noFields, lagrangianOrder):
