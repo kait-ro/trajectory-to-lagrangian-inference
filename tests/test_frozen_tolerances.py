@@ -6,7 +6,7 @@ from experiments.systems import SYSTEMS
 
 def test_physical_system_has_no_tolerance_fields():
     fields = {f.name for f in dataclasses.fields(next(iter(SYSTEMS.values())))}
-    for forbidden in ("degreeCap", "residualRmsTolerance", "correlationCutoff", "stagnationTolerance"):
+    for forbidden in ("degreeCap", "residualRmsTolerance", "correlationCutoff", "stagnationTolerance", "selector"):
         assert forbidden not in fields, f"PhysicalSystem still carries a per-system tolerance: {forbidden}"
 
 
@@ -19,12 +19,18 @@ def test_every_system_gets_the_identical_frozen_set():
 
 def test_frozen_set_matches_library_defaults():
     from finding_L import gram_forward_select, stopping_conditions
+    from finding_L.main_streaming import DEFAULT_SELECTOR
 
     assert FROZEN_TOLERANCES["correlationCutoff"] == stopping_conditions.checkCorrelationCutoff.__defaults__[0]
     assert FROZEN_TOLERANCES["residualRmsTolerance"] == gram_forward_select.checkResidualToleranceFromGram.__defaults__[0]
     assert FROZEN_TOLERANCES["pruneRelativeThreshold"] == gram_forward_select.pruneNearZeroCoefficients.__defaults__[0]
     assert FROZEN_TOLERANCES["stagnationTolerance"] == stopping_conditions.checkResidualStagnation.__defaults__[0]
     assert FROZEN_TOLERANCES["stagnationPatience"] == stopping_conditions.checkResidualStagnation.__defaults__[1]
+    assert FROZEN_TOLERANCES["selector"] == DEFAULT_SELECTOR
+
+
+def test_frozen_selector_is_a_known_value():
+    assert FROZEN_TOLERANCES["selector"] in ("greedy", "lasso")
 
 
 def test_maxrounds_is_a_generous_budget_not_a_decider():
