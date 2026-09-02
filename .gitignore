@@ -6,7 +6,6 @@ dist/
 wheels/
 *.egg-info
 .venv
-data/
-**data/
+temp/
 *.csv
 !tests/fixtures/*.csv
