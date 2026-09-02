@@ -3,13 +3,14 @@ import os
 
 import numpy as np
 import sympy as sp
-
+from experiments.artifacts import RESULTS_DIR
 from experiments.pu_system import groundTruthColumns, paisUhlenbeckStateLagrangian
 from finding_L.equivalence_class import isNullLagrangian
-from finding_L.higher_order_discovery import recoverHigherOrderLagrangian, stateToCoordinate
+from finding_L.higher_order_discovery import (
+    recoverHigherOrderLagrangian,
+    stateToCoordinate,
+)
 from generation.eqnofmotion import defineCoordinates
-
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
 NO_STATE_VARS = 3
 LAGRANGIAN_ORDER = 2
