@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import sympy as sp
-from finding_L.build_matrix import buildGramMatrixChunked
+from finding_L.build_matrix import buildAdmissibleGram, buildGramMatrixChunked
 from finding_L.candidates import buildCandidateLibrary, filterPureVelocityTerms
 from finding_L.gram_forward_select import (
     checkResidualToleranceFromGram,
@@ -10,6 +10,7 @@ from finding_L.gram_forward_select import (
     residualNormSquaredFromGram,
     scoreReserveCandidatesFromGram,
 )
+from finding_L.regularized_select import lassoSelect
 from finding_L.report import assembleDiscoveredLagrangian
 from finding_L.selection_logger import toSelectionLogFrame
 from finding_L.stopping_conditions import (
@@ -18,6 +19,8 @@ from finding_L.stopping_conditions import (
     checkResidualStagnation,
 )
 from generation.eqnofmotion import defineCoordinates
+
+DEFAULT_SELECTOR = "lasso"
 
 
 def zeroVarianceMask(G, colSum, n):
@@ -44,9 +47,28 @@ def runDiscoveryStreaming(
     stagnationPatience: int = 3,
     correlationCutoff: float = 0.1,
     pruneRelativeThreshold: float = 1e-2,
+    roundCallback=None,
+    selector: str = DEFAULT_SELECTOR,
 ):
     t, coords, vels = defineCoordinates(noCoords)
     kineticTerm = sp.expand(sum(v ** 2 for v in vels))
+
+    if selector == "lasso":
+        return runLassoDiscoveryStreaming(
+            csvPath,
+            coords,
+            vels,
+            t,
+            kineticTerm,
+            noCoords,
+            degreeCap,
+            chunkRows,
+            residualRmsTolerance,
+            pruneRelativeThreshold,
+            roundCallback,
+        )
+    if selector != "greedy":
+        raise ValueError(f"unknown selector {selector!r}; expected 'greedy' or 'lasso'")
 
     currentMaxDegree = startingMaxDegree
     candidateTerms = filterPureVelocityTerms(buildCandidateLibrary(coords, vels, currentMaxDegree), coords)
@@ -76,6 +98,20 @@ def runDiscoveryStreaming(
         residualNormSq = residualNormSquaredFromGram(targetNormSq, b, activeIndices, coefficients)
 
         converged, scaledResidual = checkResidualToleranceFromGram(residualNormSq, targetNormSq, residualRmsTolerance)
+
+        if roundCallback is not None:
+            roundCallback(
+                {
+                    "round": roundNumber,
+                    "activeTerms": [candidateTerms[index] for index in activeIndices],
+                    "coefficients": [float(value) for value in coefficients],
+                    "kineticTerm": kineticTerm,
+                    "scaledResidual": float(scaledResidual),
+                    "converged": bool(converged),
+                    "currentMaxDegree": currentMaxDegree,
+                }
+            )
+
         if converged:
             print(f"round {roundNumber}: scaledResidual={scaledResidual:.5f}")
             print("Stopping: residual converged (Condition A).")
@@ -139,7 +175,79 @@ def runDiscoveryStreaming(
     return discovered, toSelectionLogFrame(selectionLog)
 
 
+def runLassoDiscoveryStreaming(
+    csvPath,
+    coords,
+    vels,
+    t,
+    kineticTerm,
+    noCoords,
+    degreeCap,
+    chunkRows,
+    residualRmsTolerance,
+    pruneRelativeThreshold,
+    roundCallback=None,
+):
+    candidateTerms = filterPureVelocityTerms(buildCandidateLibrary(coords, vels, degreeCap), coords)
+    if kineticTerm not in candidateTerms:
+        candidateTerms.append(kineticTerm)
+
+    print(
+        f"Streaming Gram matrix over {len(candidateTerms)} candidate terms "
+        f"(selector=lasso, degree {degreeCap})..."
+    )
+    G, terms, kineticIndex, _n = buildAdmissibleGram(
+        candidateTerms, coords, vels, t, csvPath, noCoords, kineticTerm, chunkRows
+    )
+    b = -G[:, kineticIndex]
+    targetNormSq = G[kineticIndex, kineticIndex]
+
+    selectedIndices, _selectedCoefficients = lassoSelect(
+        G, b, kineticIndex, relativeThreshold=pruneRelativeThreshold
+    )
+    activeIndices, finalCoefficients = pruneNearZeroCoefficients(
+        G, b, list(selectedIndices), threshold=pruneRelativeThreshold
+    )
+
+    residualNormSq = residualNormSquaredFromGram(targetNormSq, b, activeIndices, finalCoefficients)
+    converged, scaledResidual = checkResidualToleranceFromGram(
+        residualNormSq, targetNormSq, residualRmsTolerance
+    )
+
+    discoveredTerms = [
+        (terms[index], coefficient) for index, coefficient in zip(activeIndices, finalCoefficients)
+    ]
+    discovered = assembleDiscoveredLagrangian(kineticTerm, discoveredTerms, coords, vels)
+
+    if roundCallback is not None:
+        roundCallback(
+            {
+                "round": 0,
+                "activeTerms": [terms[index] for index in activeIndices],
+                "coefficients": [float(value) for value in finalCoefficients],
+                "kineticTerm": kineticTerm,
+                "scaledResidual": float(scaledResidual),
+                "converged": bool(converged),
+                "currentMaxDegree": degreeCap,
+            }
+        )
+
+    print(f"selector=lasso: {len(activeIndices)} terms, scaledResidual={scaledResidual:.5f}")
+    print()
+    print(discovered.text)
+
+    selectionLog = [
+        {
+            "round": 0,
+            "selector": "lasso",
+            "scaledResidual": float(scaledResidual),
+            "converged": bool(converged),
+        }
+    ]
+    return discovered, toSelectionLogFrame(selectionLog)
+
+
 if __name__ == "__main__":
-    srcDir = Path(__file__).resolve().parent.parent
-    csvPath = str(srcDir / "experiments/data/anharmonic_chain_blind_n6_noise0.csv")
+    repoRoot = Path(__file__).resolve().parents[2]
+    csvPath = str(repoRoot / "assets/anharmonic_chain_blind_n6_noise0.csv")
     runDiscoveryStreaming(csvPath, noCoords=6, maxRounds=80, chunkRows=120_000, degreeCap=4)
