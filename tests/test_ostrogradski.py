@@ -1,9 +1,11 @@
 import pytest
 import sympy as sp
-
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ostrogradski import eulerLagrangeExpression, lagrangianOrder
-from generation.ostrogradski_hamiltonian import NonUniqueTopDerivativeError, ostrogradskiHamiltonian
+from generation.ostrogradski_hamiltonian import (
+    NonUniqueTopDerivativeError,
+    ostrogradskiHamiltonian,
+)
 
 OMEGA = sp.Symbol("omega", positive=True)
 
