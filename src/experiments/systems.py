@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import sympy as sp
 
@@ -46,7 +46,7 @@ def _isotropicQuarticExpected(noCoords):
     return sp.expand(kinetic - potential)
 
 
-ISOTROPIC_QUARTIC = PhysicalSystem(
+IsotropicQuartic = PhysicalSystem(
     name="isotropic_quartic_calibration",
     noCoords=6,
     buildLagrangian=_isotropicQuarticLagrangian,
@@ -92,7 +92,7 @@ def _anharmonicChainExpected(noCoords):
     return sp.expand(kinetic - harmonic - coupling - cubic - quartic)
 
 
-ANHARMONIC_CHAIN = PhysicalSystem(
+AnharmonicChain = PhysicalSystem(
     name="anharmonic_chain_blind",
     noCoords=6,
     buildLagrangian=_anharmonicChainLagrangian,
@@ -103,12 +103,56 @@ ANHARMONIC_CHAIN = PhysicalSystem(
         "(r^2)^2 calibration system (distinct per-coordinate coefficients, sparse coupling, odd-power term, "
         "no quartic cross terms)."
     ),
-    dt=0.01,
-    noSteps=1000,
-    noTrajectories=150,
-    initialStateScale=1.0,
-    startingMaxDegree=2,
 )
 
 
-SYSTEMS = {system.name: system for system in [ISOTROPIC_QUARTIC, ANHARMONIC_CHAIN]}
+def _coupledQuarticConstants(noCoords):
+    stiffnessCycle = [sp.Rational(1, 1), sp.Rational(6, 5), sp.Rational(4, 5), sp.Rational(11, 10)]
+    selfQuarticCycle = [sp.Rational(3, 10), sp.Rational(1, 5), sp.Rational(2, 5), sp.Rational(1, 4)]
+    return {
+        "stiffness": [stiffnessCycle[index % len(stiffnessCycle)] for index in range(noCoords)],
+        "selfQuartic": [selfQuarticCycle[index % len(selfQuarticCycle)] for index in range(noCoords)],
+        "crossQuartic": sp.Rational(1, 5),
+    }
+
+
+def _coupledQuarticLagrangian(coords, vels):
+    noCoords = len(coords)
+    parameters = _coupledQuarticConstants(noCoords)
+
+    kinetic = sp.Rational(1, 2) * sum(v ** 2 for v in vels)
+    harmonic = sum(sp.Rational(1, 2) * parameters["stiffness"][index] * coords[index] ** 2 for index in range(noCoords))
+    selfQuartic = sum(sp.Rational(1, 4) * parameters["selfQuartic"][index] * coords[index] ** 4 for index in range(noCoords))
+    crossQuartic = sp.Rational(1, 2) * parameters["crossQuartic"] * coords[0] ** 2 * coords[1] ** 2
+
+    return kinetic - harmonic - selfQuartic - crossQuartic, {}
+
+
+def _coupledQuarticExpected(noCoords):
+    positions, velocities = stateSymbols(noCoords)
+    parameters = _coupledQuarticConstants(noCoords)
+
+    kinetic = sum(v ** 2 for v in velocities)
+    harmonic = sum(parameters["stiffness"][index] * positions[index] ** 2 for index in range(noCoords))
+    selfQuartic = sum(sp.Rational(1, 2) * parameters["selfQuartic"][index] * positions[index] ** 4 for index in range(noCoords))
+    crossQuartic = parameters["crossQuartic"] * positions[0] ** 2 * positions[1] ** 2
+
+    return sp.expand(kinetic - harmonic - selfQuartic - crossQuartic)
+
+
+CoupledQuartic = PhysicalSystem(
+    name="coupled_quartic_blind",
+    noCoords=4,
+    buildLagrangian=_coupledQuarticLagrangian,
+    expectedScaledLagrangian=_coupledQuarticExpected,
+    description=(
+        "Anisotropic quartic oscillator with an explicit off-diagonal quartic coupling "
+        "(1/2 lambda q0^2 q1^2): per-site stiffness, per-site quartic confinement, one cross-quartic "
+        "term. Blind holdout - the cross-quartic is exactly the term family the greedy selector "
+        "hallucinates under noise, here present as ground truth."
+    ),
+    noiseLevels=(0.0, 0.01, 0.02, 0.05, 0.10),
+)
+
+
+SYSTEMS = {system.name: system for system in [IsotropicQuartic, AnharmonicChain, CoupledQuartic]}
