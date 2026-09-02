@@ -58,6 +58,8 @@ def test_detect_ghost_reports_degeneracy_rather_than_crashing():
     lagrangian = sp.diff(q1, TIME) * q2 - sp.Rational(1, 2) * q2 ** 2 - sp.Rational(1, 2) * q1 ** 2
 
     verdict = detectGhost(lagrangian, coords)
-    assert verdict["ghost"] is None
     assert verdict["degenerate"] is True
+    assert verdict["ghost"] is False
+    assert verdict["chainClosed"] is True
+    assert verdict["reducedHamiltonian"] is not None
     assert isinstance(verdict["constraintAnalysis"], DegenerateLagrangianResult)
