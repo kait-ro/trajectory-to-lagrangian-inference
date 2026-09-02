@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
 import sympy as sp
-
 from finding_L import gram_forward_select, stopping_conditions
 from finding_L.equivalence_class import classifyLagrangianPair, formatVerdict
-from finding_L.main_streaming import runDiscoveryStreaming
+from finding_L.main_streaming import DEFAULT_SELECTOR, runDiscoveryStreaming
+from finding_L.regularized_select import lassoPathFromGram
 from finding_L.report import stateExpressionToFunctional
 from generation.eqnofmotion import defineCoordinates
 
@@ -17,6 +17,7 @@ FROZEN_TOLERANCES = {
     "stagnationTolerance": stopping_conditions.checkResidualStagnation.__defaults__[0],
     "stagnationPatience": stopping_conditions.checkResidualStagnation.__defaults__[1],
     "degreeCap": 4,
+    "selector": DEFAULT_SELECTOR,
 }
 
 
@@ -26,11 +27,16 @@ def lockedDiscoveryTolerances(system=None):
 
 def frozenTolerancesReport():
     lines = [
-        "Frozen tolerances (finding_L library defaults, identical for every system; "
-        "no tuning search was run):"
+        ("Frozen tolerances (finding_L library defaults, identical for every system; "
+        "no tuning search was run):")
     ]
     for name, value in FROZEN_TOLERANCES.items():
         lines.append(f"  {name:>22} = {value}")
+    if FROZEN_TOLERANCES.get("selector") == "lasso":
+        nLambdas, lambdaRatio = lassoPathFromGram.__defaults__[0], lassoPathFromGram.__defaults__[1]
+        lines.append(f"  {'lassoNLambdas':>22} = {nLambdas}")
+        lines.append(f"  {'lassoLambdaRatio':>22} = {lambdaRatio}")
+        lines.append(f"  {'lassoResidualSlack':>22} = 0.05")
     return "\n".join(lines)
 
 
@@ -112,7 +118,7 @@ def compareToExpected(
     )
 
 
-def runSystemDiscovery(system, csvPath, chunkRows=200_000):
+def runSystemDiscovery(system, csvPath, chunkRows=200_000, roundCallback=None):
     tolerances = lockedDiscoveryTolerances(system)
     assert tolerances == FROZEN_TOLERANCES, "discovery tolerances diverged from FROZEN_TOLERANCES"
 
@@ -128,6 +134,8 @@ def runSystemDiscovery(system, csvPath, chunkRows=200_000):
         stagnationTolerance=tolerances["stagnationTolerance"],
         stagnationPatience=tolerances["stagnationPatience"],
         pruneRelativeThreshold=tolerances["pruneRelativeThreshold"],
+        roundCallback=roundCallback,
+        selector=tolerances["selector"],
     )
     return discovered, logFrame, tolerances
 
