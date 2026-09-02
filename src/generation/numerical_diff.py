@@ -50,6 +50,20 @@ def smoothingSplineDerivatives(signal, dt, maxOrder, smoothing=None, degree=5):
     return derivatives
 
 
+def segmentedDerivatives(signal, dt, maxOrder, segmentLength, method=smoothingSplineDerivatives, edgeTrim=0.0):
+    signal = np.asarray(signal, dtype=float)
+    if segmentLength <= 0 or len(signal) % segmentLength != 0:
+        raise ValueError("signal length must be a positive multiple of segmentLength")
+    cut = round(segmentLength * edgeTrim)
+    perOrder = [[] for _ in range(maxOrder + 1)]
+    for start in range(0, len(signal), segmentLength):
+        block = method(signal[start:start + segmentLength], dt, maxOrder)
+        stop = len(block[0]) - cut
+        for order in range(maxOrder + 1):
+            perOrder[order].append(np.asarray(block[order], dtype=float)[cut:stop])
+    return [np.concatenate(pieces) for pieces in perOrder]
+
+
 def relativeL2Error(estimate, truth, trim=0.05):
     estimate = np.asarray(estimate, dtype=float)
     truth = np.asarray(truth, dtype=float)
@@ -58,10 +72,3 @@ def relativeL2Error(estimate, truth, trim=0.05):
     numerator = np.linalg.norm(estimate[start:stop] - truth[start:stop])
     denominator = np.linalg.norm(truth[start:stop])
     return numerator / denominator if denominator > 0 else np.nan
-
-
-DIFFERENTIATION_METHODS = {
-    "finite_difference": finiteDifferenceDerivatives,
-    "savitzky_golay": savitzkyGolayDerivatives,
-    "smoothing_spline": smoothingSplineDerivatives,
-}
