@@ -3,25 +3,25 @@ import itertools
 import sympy as sp
 
 
-def buildCandidateLibrary(coords: list, vels: list, maxDegree: int) -> list[sp.Expr]:
-    variables = list(coords) + list(vels)
-
-    candidateTerms = []
-    seenExponents = set()
-
+def monomialLibrary(symbols, maxDegree):
+    library = []
+    seen = set()
     for degree in range(1, maxDegree + 1):
-        for combo in itertools.combinations_with_replacement(range(len(variables)), degree):
-            exponents = tuple(sorted(combo))
-            if exponents in seenExponents:
+        for combo in itertools.combinations_with_replacement(range(len(symbols)), degree):
+            key = tuple(sorted(combo))
+            if key in seen:
                 continue
-            seenExponents.add(exponents)
-
-            term = sp.Integer(1)
+            seen.add(key)
+            monomial = sp.Integer(1)
             for index in combo:
-                term = term * variables[index]
-            candidateTerms.append(sp.expand(term))
+                monomial = monomial * symbols[index]
+            library.append(sp.expand(monomial))
+    return library
 
-    return candidateTerms
+
+def buildCandidateLibrary(coords: list, vels: list, maxDegree: int) -> list[sp.Expr]:
+    return monomialLibrary(list(coords) + list(vels), maxDegree)
+
 
 def filterPureVelocityTerms(candidateTerms: list, coords: list) -> list:
     filteredTerms = [
