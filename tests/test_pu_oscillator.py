@@ -1,5 +1,4 @@
 import numpy as np
-
 from experiments.pu_oscillator_validation import (
     integratePaisUhlenbeck,
     paisUhlenbeckEquationOfMotion,
