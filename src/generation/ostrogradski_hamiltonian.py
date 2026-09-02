@@ -1,8 +1,11 @@
 import sympy as sp
+
 from generation.constraints import (
     DegenerateLagrangianResult,
     PrimaryConstraint,
     classifyConstraints,
+    diracBergmannIteration,
+    diracBracketMatrix,
 )
 from generation.ostrogradski import TIME, lagrangianOrder, timeDerivative
 
@@ -24,7 +27,7 @@ def ostrogradskiMomentumExpressions(lagrangian, coords, order):
         perCoord = []
         for lowestOrder in range(1, order + 1):
             total = sp.Integer(0)
-            for extra in range(0, order - lowestOrder + 1):
+            for extra in range(order - lowestOrder + 1):
                 partial = sp.diff(lagrangian, timeDerivative(coordinate, lowestOrder + extra))
                 total = total + sp.Integer(-1) ** extra * sp.diff(partial, TIME, extra)
             perCoord.append(sp.expand(total))
@@ -55,7 +58,7 @@ def ostrogradskiHamiltonian(lagrangian, coords, order=None, constants=None):
         topEquations.append(sp.Eq(momentumSymbols[coordinateIndex][resolvedOrder - 1], highestPartial))
 
     solutions = sp.solve(topEquations, topDerivativeSymbols, dict=True)
-    if not solutions:
+    if not solutions or any(symbol not in solutions[0] for symbol in topDerivativeSymbols):
         return analyzeDegenerateLagrangian(lagrangian, coords, resolvedOrder, constants)
     if len(solutions) > 1:
         raise NonUniqueTopDerivativeError(
@@ -161,29 +164,76 @@ def analyzeDegenerateLagrangian(lagrangian, coords, order=None, constants=None):
         ]
 
     flatPositions, flatMomenta = _flatCanonicalPairs(positionSymbols, momentumSymbols)
-    classes, bracket, firstCount, secondCount, secondaryExpected = classifyConstraints(
+    primaryClasses, primaryBracket, _fc, _sc, primarySecondaryExpected = classifyConstraints(
         constraints, hamiltonian, flatPositions, flatMomenta
     )
 
-    detail = (
-        "Primary constraints found from the non-invertible top-momentum relation. "
-        "First-class => generates a gauge transformation; second-class => reduces the "
-        "physical phase space in pairs. Dirac-bracket construction and secondary-constraint "
-        "iteration are out of scope."
-    )
+    iteration = diracBergmannIteration(constraints, hamiltonian, flatPositions, flatMomenta)
+    allConstraints = iteration["constraints"]
+    allClasses = iteration["classes"]
+    generations = iteration["generations"]
+    primaryCount = iteration["primaryCount"]
+    secondaryConstraints = allConstraints[primaryCount:]
+    chainClosed = iteration["chainClosed"]
+    totalFirstCount = iteration["firstClassCount"]
+    totalSecondCount = iteration["secondClassCount"]
+
+    physicalPhaseSpaceDimension = None
+    if chainClosed:
+        physicalPhaseSpaceDimension = (
+            2 * len(flatPositions) - 2 * totalFirstCount - totalSecondCount
+        )
+
+    secondClassExpressions = [
+        constraint.expression
+        for constraint, klass in zip(allConstraints, allClasses)
+        if klass == "second-class"
+    ]
+    diracMatrix = None
+    if chainClosed and secondClassExpressions:
+        candidate = diracBracketMatrix(secondClassExpressions, flatPositions, flatMomenta)
+        if candidate.det() != 0:
+            diracMatrix = candidate
+
+    if not chainClosed:
+        detail = (
+            "Dirac-Bergmann iteration did not close within the round budget; the constraint "
+            "structure below is incomplete."
+        )
+    elif totalFirstCount:
+        detail = (
+            "Dirac-Bergmann chain closed. First-class constraints present => residual gauge "
+            "freedom; physical phase space is what remains after gauge fixing."
+        )
+    else:
+        detail = (
+            "Dirac-Bergmann chain closed; all constraints second-class. Physical phase space "
+            "is the primary surface reduced by the constraint pairs."
+        )
+
     return DegenerateLagrangianResult(
         order=resolvedOrder,
         positionSymbols=flatPositions,
         momentumSymbols=flatMomenta,
         canonicalHamiltonian=hamiltonian,
         primaryConstraints=constraints,
-        poissonBracketMatrix=bracket,
-        constraintClass=classes,
-        firstClassCount=firstCount,
-        secondClassCount=secondCount,
-        secondaryConstraintsExpected=secondaryExpected,
+        poissonBracketMatrix=primaryBracket,
+        constraintClass=primaryClasses,
+        firstClassCount=sum(1 for klass in primaryClasses if klass.startswith("first-class")),
+        secondClassCount=sum(1 for klass in primaryClasses if klass == "second-class"),
+        secondaryConstraintsExpected=primarySecondaryExpected,
         detail=detail,
         multiplierSymbols=multiplierSymbols,
+        secondaryConstraints=secondaryConstraints,
+        allConstraints=allConstraints,
+        allConstraintClasses=allClasses,
+        constraintGenerations=generations,
+        fullPoissonBracketMatrix=iteration["bracket"],
+        totalFirstClassCount=totalFirstCount,
+        totalSecondClassCount=totalSecondCount,
+        chainClosed=chainClosed,
+        physicalPhaseSpaceDimension=physicalPhaseSpaceDimension,
+        diracBracketMatrix=diracMatrix,
     )
 
 
