@@ -2,11 +2,9 @@ import json
 import os
 
 import numpy as np
-
+from experiments.artifacts import RESULTS_DIR
 from experiments.pu_system import groundTruthColumns
 from finding_L.pipeline import endToEndPipeline
-
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
 
 def run():
