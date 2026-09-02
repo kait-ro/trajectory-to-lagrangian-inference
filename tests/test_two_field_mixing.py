@@ -1,6 +1,9 @@
 import sympy as sp
-
-from experiments.two_field_mixing import normalModeSpectrum, recoverTwoFieldPotential, simulateTwoField
+from experiments.two_field_mixing import (
+    normalModeSpectrum,
+    recoverTwoFieldPotential,
+    simulateTwoField,
+)
 from finding_L.higher_order_candidates import stateGridSymbols
 
 
