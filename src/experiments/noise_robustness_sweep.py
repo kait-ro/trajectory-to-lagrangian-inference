@@ -6,7 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
+from experiments.artifacts import RESULTS_DIR
 from experiments.discovery import (
     FROZEN_TOLERANCES,
     REFERENCE_SYSTEM,
@@ -17,8 +17,6 @@ from experiments.discovery import (
 from experiments.generate_dataset import datasetPath, generateSystemDatasets
 from experiments.systems import SYSTEMS
 from finding_L.equivalence_class import formatVerdict
-
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
 
 def _finalScaledResidual(logFrame):
