@@ -1,10 +1,12 @@
 import numpy as np
 import sympy as sp
+
 from generation.eqnofmotion import (
     ConvertSymbolsForNumpy,
     EulerLagrangeEqn,
     solveEulerLagrangeEqn,
 )
+from generation.higher_order_integrator import rk4Step
 
 
 def GetAccelFunctions(L: sp.Expr, coords: list, vels: list, t: sp.Symbol, constants: dict | None = None):
@@ -29,13 +31,7 @@ def simulateStep(state: np.ndarray, dt: float, accelFunctions: list):
         a = np.array([f(*q, *v) for f in accelFunctions])
         return np.concatenate([v, a])
 
-    k1 = stateDerivative(state)
-    k2 = stateDerivative(state + 0.5 * dt * k1)
-    k3 = stateDerivative(state + 0.5 * dt * k2)
-    k4 = stateDerivative(state + dt * k3)
-
-    next_state = state + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
-    return next_state
+    return rk4Step(state, dt, stateDerivative)
 
 
 def simulateTrajectory(initial_state: np.ndarray, accelFunctions: list, dt: float, steps: int):
