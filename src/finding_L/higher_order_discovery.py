@@ -83,16 +83,21 @@ def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
 
     kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[lagrangianOrder] ** 2)
     if kineticMonomial not in keptLibrary:
-        return 1.0
+        return 1.0, False
     kineticIndex = keptLibrary.index(kineticMonomial)
 
     kineticColumn = keptMatrix[:, kineticIndex]
     design = np.delete(keptMatrix, kineticIndex, axis=1)
     if design.shape[1] == 0:
-        return 1.0
+        return 1.0, False
     coefficients, *_ = np.linalg.lstsq(design, -kineticColumn, rcond=None)
     residual = np.linalg.norm(design @ coefficients + kineticColumn)
-    return float(residual / max(np.linalg.norm(kineticColumn), 1e-30))
+    scaledResidual = float(residual / max(np.linalg.norm(kineticColumn), 1e-30))
+
+    columnNorms = np.linalg.norm(keptMatrix, axis=0)
+    normalized = keptMatrix[:, columnNorms > 0] / columnNorms[columnNorms > 0]
+    degenerate = bool(np.linalg.matrix_rank(normalized) <= 1)
+    return scaledResidual, degenerate
 
 
 def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, convergenceTolerance=None, stagnationTolerance=None):
@@ -111,9 +116,9 @@ def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, conv
     for order in range(1, maxOrder + 1):
         if len(derivativeColumns) < 2 * order + 1:
             break
-        residual = _orderFitResidual(derivativeColumns[: 2 * order + 1], order, libraryMaxDegree)
+        residual, degenerate = _orderFitResidual(derivativeColumns[: 2 * order + 1], order, libraryMaxDegree)
         converged = residual < convergenceTolerance
-        perOrder.append({"order": order, "scaledResidual": residual, "converged": converged})
+        perOrder.append({"order": order, "scaledResidual": residual, "converged": converged, "degenerate": degenerate})
         if converged:
             return order, perOrder
 
@@ -128,6 +133,18 @@ def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, conv
     return perOrder[-1]["order"], perOrder
 
 
+def reduceOrderToPrior(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
+    if lagrangianOrder < 2 or len(derivativeColumns) < 2 * lagrangianOrder + 1:
+        return lagrangianOrder
+    inferred, perOrder = inferLagrangianOrder(
+        derivativeColumns, maxOrder=lagrangianOrder, libraryMaxDegree=libraryMaxDegree
+    )
+    inferredRecord = next((entry for entry in perOrder if entry["order"] == inferred), None)
+    if inferredRecord is not None and inferredRecord["degenerate"]:
+        return lagrangianOrder
+    return min(inferred, lagrangianOrder)
+
+
 def recoverHigherOrderLagrangian(
     derivativeColumns,
     noStateVars,
@@ -135,7 +152,17 @@ def recoverHigherOrderLagrangian(
     libraryMaxDegree=2,
     snapRelativeTolerance=0.05,
     kineticLevel=None,
+    orderPrior=False,
 ):
+    if orderPrior:
+        inferred = reduceOrderToPrior(derivativeColumns, lagrangianOrder, libraryMaxDegree)
+        if inferred < lagrangianOrder:
+            noStateVars = noStateVars - (lagrangianOrder - inferred)
+            derivativeColumns = derivativeColumns[: 2 * inferred + 1]
+            if kineticLevel is not None:
+                kineticLevel = min(kineticLevel, inferred)
+            lagrangianOrder = inferred
+
     if kineticLevel is None:
         kineticLevel = min(2, lagrangianOrder)
 
