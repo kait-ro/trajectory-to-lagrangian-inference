@@ -1,7 +1,10 @@
 import numpy as np
-from experiments.order_inference_validation import _anharmonicOscillatorColumns
+from experiments.order_inference_validation import (
+    _anharmonicOscillatorColumns,
+    _harmonicOscillatorColumns,
+)
 from experiments.pu_system import groundTruthColumns
-from finding_L.higher_order_discovery import inferLagrangianOrder
+from finding_L.higher_order_discovery import inferLagrangianOrder, reduceOrderToPrior
 
 
 def test_pais_uhlenbeck_is_inferred_as_order_two():
@@ -10,6 +13,7 @@ def test_pais_uhlenbeck_is_inferred_as_order_two():
     assert order == 2
     assert perOrder[0]["scaledResidual"] > 0.1
     assert perOrder[1]["converged"]
+    assert not perOrder[1]["degenerate"]
 
 
 def test_anharmonic_oscillator_is_inferred_as_order_one():
@@ -17,6 +21,20 @@ def test_anharmonic_oscillator_is_inferred_as_order_one():
     order, perOrder = inferLagrangianOrder(columns, maxOrder=2, libraryMaxDegree=4)
     assert order == 1
     assert perOrder[0]["converged"]
+    assert not perOrder[0]["degenerate"]
+
+
+def test_linear_harmonic_oscillator_is_order_one_but_flagged_degenerate():
+    columns = _harmonicOscillatorColumns(steps=7000, noTrajectories=6)
+    order, perOrder = inferLagrangianOrder(columns, maxOrder=3, libraryMaxDegree=2)
+    assert order == 1
+    assert perOrder[0]["converged"]
+    assert perOrder[0]["degenerate"]
+
+
+def test_degenerate_inference_does_not_reduce_an_order_prior():
+    columns = _harmonicOscillatorColumns(steps=7000, noTrajectories=6)
+    assert reduceOrderToPrior(columns, lagrangianOrder=3, libraryMaxDegree=2) == 3
 
 
 def test_not_enough_derivative_levels_raises():
