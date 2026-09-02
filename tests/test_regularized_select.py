@@ -1,7 +1,11 @@
 import numpy as np
-
+import sympy as sp
 from finding_L.higher_order_discovery import forwardSelectFromGram
+from finding_L.main_streaming import runDiscoveryStreaming
 from finding_L.regularized_select import lassoSelect, sequentialThresholdedLeastSquares
+from generation.eqnofmotion import defineCoordinates
+from generation.generate_data import generateDatasetStreaming
+from generation.integrator import GetAccelFunctions
 
 
 def _synthetic(nRows=800, nCols=10, kineticIndex=9, trueCoeffs=((0, 2.0), (3, -3.5), (6, 1.25)), noise=0.0, seed=0):
@@ -56,3 +60,45 @@ def test_stlsq_is_more_robust_than_greedy_with_a_correlated_distractor():
     stlsqActive, _c = sequentialThresholdedLeastSquares(gram, b, 5, relativeThreshold=1e-2)
     assert 4 not in stlsqActive
     assert {0, 2}.issubset(set(stlsqActive))
+
+
+def _write_anisotropic_quartic(path, noCoords=2, noTrajectories=40, noSteps=300):
+    t, coords, vels = defineCoordinates(noCoords)
+    lagrangian = (
+        sp.Rational(1, 2) * sum(v**2 for v in vels)
+        - sp.Rational(1, 2) * sum(q**2 for q in coords)
+        - sp.Rational(1, 4) * sp.Rational(1, 5) * sum(q**4 for q in coords)
+    )
+    accel = GetAccelFunctions(lagrangian, coords, vels, t)
+    np.random.seed(0)
+    generateDatasetStreaming(
+        outputPath=str(path),
+        noTrajectories=noTrajectories,
+        noSteps=noSteps,
+        dt=0.01,
+        noisePercentage=0.0,
+        accelFunctions=accel,
+        noCoords=noCoords,
+    )
+
+
+def test_lasso_streaming_path_recovers_a_clean_quartic(tmp_path):
+    csvPath = tmp_path / "quartic_n2.csv"
+    _write_anisotropic_quartic(csvPath)
+
+    discovered, log = runDiscoveryStreaming(
+        str(csvPath), noCoords=2, degreeCap=4, chunkRows=50_000, selector="lasso"
+    )
+
+    coefficients = sp.expand(discovered.expression).as_coefficients_dict()
+    expected = {
+        sp.Symbol("v0") ** 2: 1,
+        sp.Symbol("v1") ** 2: 1,
+        sp.Symbol("q0") ** 2: -1,
+        sp.Symbol("q1") ** 2: -1,
+        sp.Symbol("q0") ** 4: sp.Rational(-1, 10),
+        sp.Symbol("q1") ** 4: sp.Rational(-1, 10),
+    }
+    nonzero = {monomial: value for monomial, value in coefficients.items() if monomial != 1 and value != 0}
+    assert nonzero == expected
+    assert list(log["selector"]) == ["lasso"]
