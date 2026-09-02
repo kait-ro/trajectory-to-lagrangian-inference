@@ -1,11 +1,12 @@
-import itertools
-
 import numpy as np
 import sympy as sp
-
-from finding_L.higher_order_candidates import buildMultiFieldElMatrix, multiFieldLibrary, stateGridSymbols
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.integrator import GetAccelFunctions, simulateTrajectory
+
+from ..finding_L.higher_order_candidates import (
+    buildMultiFieldElMatrix,
+    stateGridSymbols,
+)
 
 NO_FIELDS = 2
 LAGRANGIAN_ORDER = 1
@@ -103,7 +104,7 @@ def run():
         want = expected[monomial]
         ok = abs(got - want) < 0.02
         allOk = allOk and ok
-        lines.append(f"    {str(monomial):>10}: recovered {got:+.4f}   expected {want:+.4f}   {'ok' if ok else 'MISMATCH'}")
+        lines.append(f"    {monomial!s:>10}: recovered {got:+.4f}   expected {want:+.4f}   {'ok' if ok else 'MISMATCH'}")
     lines.append(f"  mixing term recovered: {allOk}")
     lines.append("")
     lines.append("Note: the velocity sector (a non-trivial mass matrix) is not recoverable from")
