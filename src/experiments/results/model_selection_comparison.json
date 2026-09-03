@@ -3,97 +3,109 @@
     {
       "noiseLevel": 0.0,
       "greedy": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 3.1086244689504383e-15,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 5.10702591327572e-15
       },
       "stlsq": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 4.574118861455645e-14,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 4.574118861455645e-14
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 4.574118861455645e-14,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 4.574118861455645e-14
       }
     },
     {
       "noiseLevel": 0.01,
       "greedy": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0006440821137960739,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 0.6666666666666666,
+        "equivalentFraction": 0.6666666666666666,
+        "meanMissing": 2.0,
+        "meanSpurious": 5.333333333333333,
+        "worstMaxAbsError": 0.1970320096577527
       },
       "stlsq": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0006440821138031794,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0011350010208421857
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0006440821138031794,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0011350010208421857
       }
     },
     {
       "noiseLevel": 0.02,
       "greedy": {
-        "success": false,
-        "missing": 7,
-        "spurious": 19,
-        "maxAbsError": 0.2607048892987165,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 6.666666666666667,
+        "meanSpurious": 15.666666666666666,
+        "worstMaxAbsError": 0.2607048892987165
       },
       "stlsq": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0027568060789446847,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0037957049965964273
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0027568060789446847,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0037957049965964273
       }
     },
     {
       "noiseLevel": 0.05,
       "greedy": {
-        "success": false,
-        "missing": 19,
-        "spurious": 19,
-        "maxAbsError": 0.5054880660868881,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 19.0,
+        "meanSpurious": 19.0,
+        "worstMaxAbsError": 0.5054880660868881
       },
       "stlsq": {
-        "success": false,
-        "missing": 0,
-        "spurious": 11,
-        "maxAbsError": 0.08589413675321866,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 13.333333333333334,
+        "worstMaxAbsError": 0.09225412542043387
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.01753951240340279,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.02046194192846662
       }
     }
   ],
@@ -101,97 +113,219 @@
     {
       "noiseLevel": 0.0,
       "greedy": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 2.220446049250313e-15,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 2.220446049250313e-15
       },
       "stlsq": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 3.6637359812630166e-15,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 4.884981308350689e-15
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 3.6637359812630166e-15,
-        "structurallyEquivalent": true
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 4.884981308350689e-15
       }
     },
     {
       "noiseLevel": 0.01,
       "greedy": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0005292602750225361,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0007000252717941635
       },
       "stlsq": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0005292602750210651,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0007000252717925814
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0005292602750210651,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0007000252717925814
       }
     },
     {
       "noiseLevel": 0.02,
       "greedy": {
-        "success": false,
-        "missing": 6,
-        "spurious": 6,
-        "maxAbsError": 0.1387473993480527,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 6.0,
+        "meanSpurious": 6.0,
+        "worstMaxAbsError": 0.13907686033879718
       },
       "stlsq": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0020899731312429004,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.002343477141700079
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.0020899731312429004,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.002343477141700079
       }
     },
     {
       "noiseLevel": 0.05,
       "greedy": {
-        "success": false,
-        "missing": 6,
-        "spurious": 6,
-        "maxAbsError": 0.13596712011137335,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 6.0,
+        "meanSpurious": 6.0,
+        "worstMaxAbsError": 0.13677121533817382
       },
       "stlsq": {
-        "success": false,
-        "missing": 0,
-        "spurious": 10,
-        "maxAbsError": 0.06276837915573692,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 8.666666666666666,
+        "worstMaxAbsError": 0.06276837915573692
       },
       "lasso": {
-        "success": true,
-        "missing": 0,
-        "spurious": 0,
-        "maxAbsError": 0.01260460685186085,
-        "structurallyEquivalent": false
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.012631856199352837
+      }
+    }
+  ],
+  "coupled_quartic_blind": [
+    {
+      "noiseLevel": 0.0,
+      "greedy": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 4.6629367034256575e-15
+      },
+      "stlsq": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 6.5503158452884236e-15
+      },
+      "lasso": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 6.5503158452884236e-15
+      }
+    },
+    {
+      "noiseLevel": 0.01,
+      "greedy": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0007729751290508347
+      },
+      "stlsq": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0007729751290503906
+      },
+      "lasso": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 1.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0007729751290503906
+      }
+    },
+    {
+      "noiseLevel": 0.02,
+      "greedy": {
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 3.0,
+        "meanSpurious": 3.6666666666666665,
+        "worstMaxAbsError": 0.1522123030407878
+      },
+      "stlsq": {
+        "seeds": 3,
+        "recoveredFraction": 0.6666666666666666,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.3333333333333333,
+        "worstMaxAbsError": 0.013252907999962454
+      },
+      "lasso": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.0026885238031968406
+      }
+    },
+    {
+      "noiseLevel": 0.05,
+      "greedy": {
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 4.0,
+        "meanSpurious": 4.0,
+        "worstMaxAbsError": 0.17037964483951795
+      },
+      "stlsq": {
+        "seeds": 3,
+        "recoveredFraction": 0.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 4.0,
+        "worstMaxAbsError": 0.07379197216270747
+      },
+      "lasso": {
+        "seeds": 3,
+        "recoveredFraction": 1.0,
+        "equivalentFraction": 0.0,
+        "meanMissing": 0.0,
+        "meanSpurious": 0.0,
+        "worstMaxAbsError": 0.014820676326660731
       }
     }
   ]

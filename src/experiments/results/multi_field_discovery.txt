@@ -15,13 +15,23 @@ Multi-field higher-derivative Lagrangian recovery (coupled Pais-Uhlenbeck chain)
   cross-field coupling coefficient: recovered +0.6000  true +0.6000
   equivalence-class match to true chain: True
 
-[spline_from_0.03pct_positions_2field]  (2 fields)
+[spline_glued_from_0.03pct_positions_2field]  (2 fields)
   recovered: 282920*s0_0*s0_2 + s0_2**2 + 194041*s1_0*s1_2 + s1_2**2
   cross-field coupling coefficient: recovered +0.0000  true +0.6000
   equivalence-class match to true chain: False
 
+[spline_segmented_from_0.03pct_positions_2field]  (2 fields)
+  recovered: 4*s0_0**2 + 5*s0_0*s0_2 + 3*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + s1_2**2
+  cross-field coupling coefficient: recovered +0.5997  true +0.6000
+  equivalence-class match to true chain: True
+
 Ground truth and column-perturbed: exact recovery up to a total derivative, with the
 cross-field coupling term included -- the multi-coordinate recovery itself is sound.
-The spline-from-noisy-positions path fails: multi-field higher-order differentiation
-is much harder than single-field (each EL column mixes several fields' derivative
-levels). Better differentiation, not a better recovery, is what's missing.
+Spline-from-noisy-positions: the 'glued' path splines one curve through all
+6 concatenated trajectories, so the step discontinuities at the joins blow up
+the 3rd/4th derivatives and recovery fails. The 'segmented' path differentiates each
+trajectory on its own (segmentedDerivatives) and trims the spline-unstable segment
+edges; the coupled chain is then recovered up to a total derivative from 0.03% position
+noise. The remaining gap to the ~3% single-field case is real -- each field's 4th
+derivative is taken from short segments -- but it is a differentiation gap, not a
+recovery one.

@@ -1,38 +1,45 @@
-Model selection: greedy forward selection vs. STLSQ vs. LASSO
+Model selection: greedy forward selection vs. STLSQ vs. debiased LASSO
 
-isotropic_quartic_calibration
+Degree-4 library, 3 seeds per noise level, every system in experiments.systems.SYSTEMS.
+cell = fraction of seeds recovered / fraction structurally equivalent / mean missing / mean spurious
 
- noise                        greedy                         stlsq                         lasso
-              miss/spur/maxErr/equiv        miss/spur/maxErr/equiv        miss/spur/maxErr/equiv
-------------------------------------------------------------------------------------------------
-  0.0%            0/  0/  0.000/  eq            0/  0/  0.000/  eq            0/  0/  0.000/  eq
-  1.0%            0/  0/  0.001/  eq            0/  0/  0.001/  eq            0/  0/  0.001/  eq
-  2.0%            7/ 19/  0.261/  --            0/  0/  0.003/  ok            0/  0/  0.003/  ok
-  5.0%           19/ 19/  0.505/  --            0/ 11/  0.086/  --            0/  0/  0.018/  ok
+isotropic_quartic_calibration  (3 seeds per noise level)
 
-anharmonic_chain_blind
+ noise                      greedy                       stlsq                       lasso
+         rec / equiv / miss / spur   rec / equiv / miss / spur   rec / equiv / miss / spur
+------------------------------------------------------------------------------------------
+  0.0%   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0
+  1.0%   0.67 / 0.67 /  2.0 /  5.3   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0
+  2.0%   0.00 / 0.00 /  6.7 / 15.7   1.00 / 0.00 /  0.0 /  0.0   1.00 / 0.00 /  0.0 /  0.0
+  5.0%   0.00 / 0.00 / 19.0 / 19.0   0.00 / 0.00 /  0.0 / 13.3   1.00 / 0.00 /  0.0 /  0.0
 
- noise                        greedy                         stlsq                         lasso
-              miss/spur/maxErr/equiv        miss/spur/maxErr/equiv        miss/spur/maxErr/equiv
-------------------------------------------------------------------------------------------------
-  0.0%            0/  0/  0.000/  eq            0/  0/  0.000/  eq            0/  0/  0.000/  eq
-  1.0%            0/  0/  0.001/  ok            0/  0/  0.001/  ok            0/  0/  0.001/  ok
-  2.0%            6/  6/  0.139/  --            0/  0/  0.002/  ok            0/  0/  0.002/  ok
-  5.0%            6/  6/  0.136/  --            0/ 10/  0.063/  --            0/  0/  0.013/  ok
+anharmonic_chain_blind  (3 seeds per noise level)
 
-cell = missing / spurious / max|coef error| / verdict (eq=null-Lagrangian match, ok=exact-set, --=failed)
+ noise                      greedy                       stlsq                       lasso
+         rec / equiv / miss / spur   rec / equiv / miss / spur   rec / equiv / miss / spur
+------------------------------------------------------------------------------------------
+  0.0%   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0
+  1.0%   1.00 / 0.00 /  0.0 /  0.0   1.00 / 0.00 /  0.0 /  0.0   1.00 / 0.00 /  0.0 /  0.0
+  2.0%   0.00 / 0.00 /  6.0 /  6.0   1.00 / 0.00 /  0.0 /  0.0   1.00 / 0.00 /  0.0 /  0.0
+  5.0%   0.00 / 0.00 /  6.0 /  6.0   0.00 / 0.00 /  0.0 /  8.7   1.00 / 0.00 /  0.0 /  0.0
 
-Reading (single seed per noise level, degree-4 library, both benchmark systems):
-  * clean data: all three selectors recover the systems exactly.
-  * greedy forward selection fails from ~2% noise (the spurious velocity-quartic
-    terms out-correlate the true cubics and it commits to them early).
-  * STLSQ -- starting from the full least-squares fit and thresholding down --
-    recovers exactly at 2%, then starts keeping spurious terms at 5%.
-  * the debiased LASSO path recovers BOTH systems exactly through 5% noise.
+coupled_quartic_blind  (3 seeds per noise level)
 
-So the regularisation-path approach clearly beats greedy here, and the ~1-2%
-ceiling in PROJECT.md problem A is a property of the *greedy selector*, not of
-ordinary-least-squares Lagrangian recovery. The debiased LASSO path is a strong
-replacement candidate. It is kept additive for now -- this is one seed per level
-on two systems; a switch of the production default should first be validated over
-more seeds, more systems, and the streaming (degree-expanding) path.
+ noise                      greedy                       stlsq                       lasso
+         rec / equiv / miss / spur   rec / equiv / miss / spur   rec / equiv / miss / spur
+------------------------------------------------------------------------------------------
+  0.0%   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0
+  1.0%   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0   1.00 / 1.00 /  0.0 /  0.0
+  2.0%   0.00 / 0.00 /  3.0 /  3.7   0.67 / 0.00 /  0.0 /  0.3   1.00 / 0.00 /  0.0 /  0.0
+  5.0%   0.00 / 0.00 /  4.0 /  4.0   0.00 / 0.00 /  0.0 /  4.0   1.00 / 0.00 /  0.0 /  0.0
+
+Reading:
+  * clean data: all three selectors recover every system exactly.
+  * greedy forward selection degrades from ~2% noise -- spurious velocity-quartic
+    terms out-correlate the true cubics and it commits to them early.
+  * the debiased LASSO path recovers the benchmark systems exactly further into noise.
+
+The ~1-2% noise ceiling is a property of the greedy selector, not of
+ordinary-least-squares Lagrangian recovery. Debiased LASSO is now the production
+2nd-order selector (finding_L.main_streaming.DEFAULT_SELECTOR = 'lasso'); the greedy
+path stays reachable via runDiscoveryStreaming(selector='greedy').

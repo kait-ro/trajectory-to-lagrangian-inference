@@ -7,12 +7,14 @@
       {
         "order": 1,
         "scaledResidual": 0.498321984309176,
-        "converged": false
+        "converged": false,
+        "degenerate": false
       },
       {
         "order": 2,
         "scaledResidual": 4.910776910815014e-17,
-        "converged": true
+        "converged": true,
+        "degenerate": false
       }
     ]
   },
@@ -24,7 +26,21 @@
       {
         "order": 1,
         "scaledResidual": 7.582104751592224e-16,
-        "converged": true
+        "converged": true,
+        "degenerate": false
+      }
+    ]
+  },
+  {
+    "system": "harmonic_oscillator",
+    "trueOrder": 1,
+    "inferredOrder": 1,
+    "perOrder": [
+      {
+        "order": 1,
+        "scaledResidual": 2.2366366271949724e-16,
+        "converged": true,
+        "degenerate": true
       }
     ]
   }

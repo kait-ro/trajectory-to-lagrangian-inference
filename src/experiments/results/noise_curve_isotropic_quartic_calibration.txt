@@ -9,14 +9,18 @@ Frozen tolerances (finding_L library defaults, identical for every system; no tu
      stagnationTolerance = 0.01
       stagnationPatience = 3
                degreeCap = 4
+                selector = lasso
+           lassoNLambdas = 40
+        lassoLambdaRatio = 0.001
+      lassoResidualSlack = 0.05
 
 equiv? = is (discovered - expected) a genuine null Lagrangian (EL operator identically zero)
 
   noise    outcome  missing  spurious  max|dcoef|  finalResid   equiv?
 ----------------------------------------------------------------------
-     5%     failed       20        20      0.5087      0.0980       no
-    10%     failed       21        11      0.5651      0.1720       no
+     1%  recovered        0         0      0.0006      0.0153    exact
+    10%     failed        4        33      0.1989      0.1420       no
 
 Equivalence-class verdict per noise level (discovered - expected):
-  [5% noise] NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct
+  [1% noise] equivalent -- dL == 0 (exact structural match)
   [10% noise] NOT equivalent -- nonzero Euler-Lagrange residual, physically distinct

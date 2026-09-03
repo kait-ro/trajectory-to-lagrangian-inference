@@ -24,11 +24,19 @@
     "equivalentUpToNullLagrangian": true
   },
   {
-    "scenario": "spline_from_0.03pct_positions_2field",
+    "scenario": "spline_glued_from_0.03pct_positions_2field",
     "noFields": 2,
     "trueCoupling2mu": 0.6,
     "recoveredCrossFieldCoefficient": 0.0,
     "recovered": "282920*s0_0*s0_2 + s0_2**2 + 194041*s1_0*s1_2 + s1_2**2",
     "equivalentUpToNullLagrangian": false
+  },
+  {
+    "scenario": "spline_segmented_from_0.03pct_positions_2field",
+    "noFields": 2,
+    "trueCoupling2mu": 0.6,
+    "recoveredCrossFieldCoefficient": 0.599721441168487,
+    "recovered": "4*s0_0**2 + 5*s0_0*s0_2 + 3*s0_0*s1_0/5 + s0_2**2 + 4*s1_0**2 + 5*s1_0*s1_2 + s1_2**2",
+    "equivalentUpToNullLagrangian": true
   }
 ]
