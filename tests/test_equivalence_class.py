@@ -1,6 +1,7 @@
 import sympy as sp
 from finding_L.equivalence_class import (
     classifyLagrangianPair,
+    eulerLagrangeResidual,
     isNullLagrangian,
     verifyEquivalenceClass,
 )
@@ -124,3 +125,13 @@ def test_classify_pair_rejects_close_but_distinct_candidates():
     verdict = classifyLagrangianPair(nearMiss, base, coords, vels)
 
     assert not verdict.equivalent
+
+
+def test_euler_lagrange_residual_sign_consistent_across_order():
+    _t, coords, vels = defineCoordinates(2)
+    base = _base_lagrangian(coords, vels)
+
+    orderOneResidual = eulerLagrangeResidual(base, coords, vels, order=1)
+    orderTwoResidual = eulerLagrangeResidual(base, coords, vels, order=2)
+
+    assert all(sp.expand(a - b) == 0 for a, b in zip(orderOneResidual, orderTwoResidual))
