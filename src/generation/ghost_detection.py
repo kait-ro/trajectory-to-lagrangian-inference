@@ -3,13 +3,17 @@ import sympy as sp
 
 from generation.boundedness import polynomialBoundedBelow
 from generation.constraints import DegenerateLagrangianResult
-from generation.ostrogradski import TIME, eulerLagrangeSystem
+from generation.ostrogradski import (
+    TIME,
+    canonicalizeLagrangian,
+    eulerLagrangeSystem,
+    isNullLagrangianLocal,
+    lagrangianOrder,
+)
 from generation.ostrogradski_hamiltonian import ostrogradskiHamiltonian
 
 
-def characteristicRoots(lagrangian, coords, order=None):
-    elSystem, resolvedOrder = eulerLagrangeSystem(lagrangian, coords, order)
-    growthRate = sp.Symbol("s")
+def _legacyPerCoordinateRoots(elSystem, coords, resolvedOrder, growthRate):
     roots = []
     for coordinate, expression in zip(coords, elSystem):
         substitution = {}
@@ -21,6 +25,32 @@ def characteristicRoots(lagrangian, coords, order=None):
         for root in np.roots([complex(coefficient) for coefficient in polynomial.all_coeffs()]):
             roots.append(complex(root))
     return roots
+
+
+def characteristicRoots(lagrangian, coords, order=None):
+    elSystem, resolvedOrder = eulerLagrangeSystem(lagrangian, coords, order)
+    growthRate = sp.Symbol("s")
+    amplitudes = [sp.Symbol(f"A{index}") for index in range(len(coords))]
+
+    substitution = {}
+    for coordinate, amplitude in zip(coords, amplitudes):
+        for k in range(2 * resolvedOrder + 1):
+            derivative = coordinate if k == 0 else sp.diff(coordinate, TIME, k)
+            substitution[derivative] = amplitude * growthRate ** k
+
+    substitutedSystem = [sp.expand(equation.subs(substitution)) for equation in elSystem]
+
+    size = len(coords)
+    matrix = sp.zeros(size, size)
+    for i in range(size):
+        for j in range(size):
+            entry = sp.diff(substitutedSystem[i], amplitudes[j])
+            if any(entry.has(amplitude) for amplitude in amplitudes):
+                return _legacyPerCoordinateRoots(elSystem, coords, resolvedOrder, growthRate)
+            matrix[i, j] = entry
+
+    polynomial = sp.Poly(sp.expand(matrix.det()), growthRate)
+    return [complex(root) for root in np.roots([complex(coefficient) for coefficient in polynomial.all_coeffs()])]
 
 
 def dynamicalStability(roots, tolerance=1e-6):
@@ -162,6 +192,12 @@ def hamiltonianHessian(hamiltonian, variables):
 
 
 def detectGhost(lagrangian, coords, order=None, constants=None, eigenvalueTolerance=1e-8):
+    lagrangian = sp.sympify(lagrangian)
+    resolvedOrder = lagrangianOrder(lagrangian, coords) if order is None else order
+    canonicalized = canonicalizeLagrangian(lagrangian, coords, resolvedOrder)
+    if sp.expand(canonicalized - lagrangian) != 0 and isNullLagrangianLocal(canonicalized - lagrangian, coords, resolvedOrder):
+        lagrangian = canonicalized
+
     hamiltonianData = ostrogradskiHamiltonian(lagrangian, coords, order, constants)
 
     if isinstance(hamiltonianData, DegenerateLagrangianResult):
