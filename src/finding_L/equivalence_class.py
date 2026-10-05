@@ -2,7 +2,7 @@ import itertools
 from dataclasses import dataclass
 
 import sympy as sp
-from generation.eqnofmotion import TIME, EulerLagrangeEqn
+from generation.eqnofmotion import TIME
 from generation.ostrogradski import eulerLagrangeExpression, lagrangianOrder
 
 
@@ -18,12 +18,10 @@ def eulerLagrangeResidual(lagrangianFunctional, coords, vels, order=None):
     lagrangian = sp.expand(lagrangianFunctional)
     resolvedOrder = lagrangianOrder(lagrangian, list(coords)) if order is None else order
 
-    if resolvedOrder <= 1:
-        residual = list(EulerLagrangeEqn(lagrangian, list(coords), list(vels)))
-    else:
-        residual = [
-            eulerLagrangeExpression(lagrangian, coordinate, resolvedOrder) for coordinate in coords
-        ]
+    residual = [
+        eulerLagrangeExpression(lagrangian, coordinate, resolvedOrder, pipelineSign=True)
+        for coordinate in coords
+    ]
     return [_reduceToZero(component) for component in residual]
 
 
