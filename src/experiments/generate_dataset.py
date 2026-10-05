@@ -3,11 +3,10 @@ import os
 from pathlib import Path
 
 import numpy as np
+from experiments.systems import SYSTEMS
 from generation.eqnofmotion import defineCoordinates
 from generation.generate_data import generateDatasetStreaming
 from generation.integrator import GetAccelFunctions
-
-from experiments.systems import SYSTEMS
 
 ASSETS_DIR = str(Path(__file__).resolve().parents[2] / "assets")
 DEFAULT_SEED = 20260828

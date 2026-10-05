@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import sympy as sp
+from generation.eqnofmotion import TIME
 
 
 def stateSymbols(noCoords):
@@ -29,7 +30,8 @@ class PhysicalSystem:
         return f"{self.name}_n{self.noCoords}"
 
 
-def _isotropicQuarticLagrangian(coords, vels):
+def _isotropicQuarticLagrangian(coords):
+    vels = [sp.diff(q, TIME) for q in coords]
     m, k, eps = sp.symbols("m k epsilon")
     rSquared = sum(q ** 2 for q in coords)
     vSquared = sum(v ** 2 for v in vels)
@@ -65,7 +67,8 @@ def _anharmonicChainConstants(noCoords):
     }
 
 
-def _anharmonicChainLagrangian(coords, vels):
+def _anharmonicChainLagrangian(coords):
+    vels = [sp.diff(q, TIME) for q in coords]
     noCoords = len(coords)
     parameters = _anharmonicChainConstants(noCoords)
 
@@ -116,7 +119,8 @@ def _coupledQuarticConstants(noCoords):
     }
 
 
-def _coupledQuarticLagrangian(coords, vels):
+def _coupledQuarticLagrangian(coords):
+    vels = [sp.diff(q, TIME) for q in coords]
     noCoords = len(coords)
     parameters = _coupledQuarticConstants(noCoords)
 
