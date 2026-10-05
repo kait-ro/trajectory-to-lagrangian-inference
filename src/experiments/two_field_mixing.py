@@ -1,12 +1,11 @@
 import numpy as np
 import sympy as sp
-from generation.eqnofmotion import TIME, defineCoordinates
-from generation.integrator import GetAccelFunctions, simulateTrajectory
-
-from ..finding_L.higher_order_candidates import (
+from finding_L.higher_order_candidates import (
     buildMultiFieldElMatrix,
     stateGridSymbols,
 )
+from generation.eqnofmotion import TIME, defineCoordinates
+from generation.integrator import GetAccelFunctions, simulateTrajectory
 
 NO_FIELDS = 2
 LAGRANGIAN_ORDER = 1
