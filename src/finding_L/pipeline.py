@@ -2,15 +2,19 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import sympy as sp
+from finding_L.higher_order_candidates import buildMultiFieldElMatrix, stateGridSymbols
 from finding_L.higher_order_discovery import (
     inferLagrangianOrder,
+    multiFieldStateToCoordinates,
     recoverHigherOrderLagrangian,
+    recoverMultiFieldHigherOrderLagrangian,
     stateToCoordinate,
 )
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ghost_detection import detectGhost
 from generation.numerical_diff import (
     savitzkyGolayDerivatives,
+    segmentedDerivatives,
     smoothingSplineDerivatives,
 )
 from generation.ostrogradski import eulerLagrangeExpression
@@ -70,10 +74,31 @@ class PipelineResult:
 _METHOD_MAX_LEVEL = {"smoothing_spline": 4}
 
 
-def _derivativeColumns(name, method, signal, dt, maxLevel):
+def _derivativeColumns(name, method, signal, dt, maxLevel, segmentLength=None, edgeTrim=0.05):
     level = min(maxLevel, _METHOD_MAX_LEVEL.get(name, maxLevel))
-    derivatives = method(np.asarray(signal, dtype=float), dt, level)
+    signal = np.asarray(signal, dtype=float)
+    if segmentLength is None:
+        derivatives = method(signal, dt, level)
+    else:
+        derivatives = segmentedDerivatives(signal, dt, level, segmentLength, method=method, edgeTrim=edgeTrim)
     return [np.asarray(component, dtype=float) for component in derivatives]
+
+
+def _multiFieldDerivativeColumns(name, method, positions, dt, maxLevel, noFields, segmentLength=None, edgeTrim=0.05):
+    level = min(maxLevel, _METHOD_MAX_LEVEL.get(name, maxLevel))
+    if segmentLength is None:
+        perField = [method(np.asarray(positions[:, field], dtype=float), dt, level) for field in range(noFields)]
+    else:
+        perField = [
+            segmentedDerivatives(
+                np.asarray(positions[:, field], dtype=float), dt, level, segmentLength, method=method, edgeTrim=edgeTrim
+            )
+            for field in range(noFields)
+        ]
+    return [
+        np.column_stack([np.asarray(perField[field][levelIndex], dtype=float) for field in range(noFields)])
+        for levelIndex in range(level + 1)
+    ]
 
 
 def _lagrangianElResidual(recoveredStateExpression, noStateVars, order, columns):
@@ -102,21 +127,52 @@ def _lagrangianElResidual(recoveredStateExpression, noStateVars, order, columns)
     return float(np.linalg.norm(lagrangianColumn) / max(denominator, 1e-30))
 
 
-def _recoverAndDiagnose(columns, maxOrder, libraryMaxDegree):
-    order, _perOrder = inferLagrangianOrder(columns, maxOrder=maxOrder, libraryMaxDegree=libraryMaxDegree)
-    noStateVars = order + 1
-    recovered, selected = recoverHigherOrderLagrangian(
-        columns[: 2 * order + 1], noStateVars, order, libraryMaxDegree=libraryMaxDegree
-    )
-    orderResidual = _lagrangianElResidual(recovered, noStateVars, order, columns[: 2 * order + 1])
+def _multiFieldLagrangianElResidual(recoveredStateExpression, noFields, order, columns):
+    grid = stateGridSymbols(noFields, order)
+    kineticState = sp.expand(sum(grid[field][order] ** 2 for field in range(noFields)))
 
-    _t, coords, _v = defineCoordinates(1)
-    lagrangianInCoords = stateToCoordinate(recovered, noStateVars, coords[0])
+    columnOrder = 2 * order
+    derivativeData = [np.asarray(column, dtype=float) for column in columns[: columnOrder + 1]]
+
+    try:
+        matrix, _elExpressions = buildMultiFieldElMatrix(
+            [recoveredStateExpression, kineticState], noFields, order, derivativeData
+        )
+    except ValueError:
+        return float("inf")
+
+    lagrangianColumn = matrix[:, 0]
+    kineticColumn = matrix[:, 1]
+    denominator = np.linalg.norm(kineticColumn)
+    return float(np.linalg.norm(lagrangianColumn) / max(denominator, 1e-30))
+
+
+def _recoverAndDiagnose(columns, maxOrder, libraryMaxDegree, noFields=1):
+    order, _perOrder = inferLagrangianOrder(
+        columns, maxOrder=maxOrder, libraryMaxDegree=libraryMaxDegree, noFields=noFields
+    )
+
+    if noFields == 1:
+        noStateVars = order + 1
+        recovered, selected = recoverHigherOrderLagrangian(
+            columns[: 2 * order + 1], noStateVars, order, libraryMaxDegree=libraryMaxDegree
+        )
+        orderResidual = _lagrangianElResidual(recovered, noStateVars, order, columns[: 2 * order + 1])
+        _t, coords, _v = defineCoordinates(1)
+        lagrangianInCoords = stateToCoordinate(recovered, noStateVars, coords[0])
+    else:
+        recovered, selected = recoverMultiFieldHigherOrderLagrangian(
+            columns[: 2 * order + 1], noFields, order, libraryMaxDegree=libraryMaxDegree
+        )
+        orderResidual = _multiFieldLagrangianElResidual(recovered, noFields, order, columns[: 2 * order + 1])
+        _t, coords, _v = defineCoordinates(noFields)
+        lagrangianInCoords = multiFieldStateToCoordinates(recovered, noFields, order, coords)
+
     try:
         verdict = detectGhost(lagrangianInCoords, coords, order=order)
         ghost = verdict.get("ghost")
         ghostDetail = verdict.get("detail", "")
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         ghost, ghostDetail = None, f"ghost analysis failed: {error}"
 
     return {
@@ -138,15 +194,21 @@ def _coefficientDict(expression):
     }
 
 
-def endToEndPipeline(noisyPositions, dt, maxOrder=3, libraryMaxDegree=2):
-    signal = np.asarray(noisyPositions, dtype=float).reshape(-1)
+def endToEndPipeline(noisyPositions, dt, maxOrder=3, libraryMaxDegree=2, noFields=1, segmentLength=None, edgeTrim=0.05):
+    positions = np.asarray(noisyPositions, dtype=float)
+    positions = positions.reshape(-1) if noFields == 1 else positions.reshape(-1, noFields)
     maxLevel = 2 * maxOrder
 
     perMethod = []
     for name, method in _METHODS.items():
         try:
-            columns = _derivativeColumns(name, method, signal, dt, maxLevel)
-            diagnosis = _recoverAndDiagnose(columns, maxOrder, libraryMaxDegree)
+            if noFields == 1:
+                columns = _derivativeColumns(name, method, positions, dt, maxLevel, segmentLength, edgeTrim)
+            else:
+                columns = _multiFieldDerivativeColumns(
+                    name, method, positions, dt, maxLevel, noFields, segmentLength, edgeTrim
+                )
+            diagnosis = _recoverAndDiagnose(columns, maxOrder, libraryMaxDegree, noFields)
             diagnosis["method"] = name
             perMethod.append(diagnosis)
         except Exception as error:
