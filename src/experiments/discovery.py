@@ -60,12 +60,26 @@ def _coefficientDict(expression):
 
 def _inferNoCoords(*expressions):
     maxIndex = -1
+    maxFieldIndex = -1
+    hasBareStateSymbol = False
     for expression in expressions:
         for symbol in sp.sympify(expression).free_symbols:
             name = symbol.name
             if len(name) >= 2 and name[0] in "qv" and name[1:].isdigit():
                 maxIndex = max(maxIndex, int(name[1:]))
-    return maxIndex + 1
+            elif name[0] == "s" and "_" in name[1:]:
+                fieldPart, _, levelPart = name[1:].partition("_")
+                if fieldPart.isdigit() and levelPart.isdigit():
+                    maxFieldIndex = max(maxFieldIndex, int(fieldPart))
+            elif len(name) >= 2 and name[0] == "s" and name[1:].isdigit():
+                hasBareStateSymbol = True
+    if maxIndex >= 0:
+        return maxIndex + 1
+    if maxFieldIndex >= 0:
+        return maxFieldIndex + 1
+    if hasBareStateSymbol:
+        return 1
+    return 0
 
 
 def compareToExpected(
