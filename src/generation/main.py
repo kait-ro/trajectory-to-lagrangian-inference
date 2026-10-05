@@ -9,12 +9,12 @@ from generation.integrator import GetAccelFunctions
 
 
 def main():
-    noCoords = 15
-    noTrajectories = 150
+    noCoords = 4
+    noTrajectories = 1500
 
-    noSteps = 1000
+    noSteps = 10000
     dt = 0.01
-    noiseLevels = [0.0, 0.05, 0.10, 0.25, 0.50]
+    noiseLevels = [0.0, 0.05, 0.10, 0.25]
 
     t, coords, vels = defineCoordinates(noCoords)
 
