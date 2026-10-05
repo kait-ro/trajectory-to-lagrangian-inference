@@ -89,16 +89,26 @@ first/second-class classification — rather than a plain Hessian.
 ### Symbol conventions
 
 `generation/eqnofmotion.py` owns the single time symbol `TIME = Symbol("t")` and
-`defineCoordinates(n)` → `q_i(t)` functions plus their first derivatives. Two
-symbol spaces, mapped in `finding_L/report.py`:
+`defineCoordinates(n)` → `q_i(t)` functions plus their derivatives.
+**Functional** symbols (`q0(t)`, `Derivative(q0(t), t)`) are used for all
+calculus (Euler–Lagrange derivatives, total time derivatives) — differentiation
+w.r.t. time and w.r.t. the coordinate only makes sense when the coordinate is a
+function of `t`.
 
-- **functional** (`q0(t)`, `Derivative(q0(t), t)`) — used for all calculus
-  (Euler–Lagrange derivatives, total time derivatives); differentiation w.r.t.
-  time and w.r.t. the coordinate only makes sense when the coordinate is a
-  function of `t`.
-- **state** (`q0, v0, …`; `s0, s1, s2, …` for the higher-derivative track) — used
-  for the numeric regression and the readable output; plain symbols lambdify
-  cleanly and read well.
+For numeric regression and readable output, plain **state** symbols are used
+instead — they lambdify cleanly and read well. There are deliberately three
+state-symbol conventions, not one, each the most readable choice for its case:
+`q_i, v_i` for order-1 systems (the familiar physics notation, the most common
+case); bare `s0, s1, s2, …` for single-field higher-derivative systems (no field
+index, because there's only one field — adding one would be pure noise); and
+`s{field}_{level}` for multi-field higher-derivative systems (the field index is
+load-bearing there). Forcing all three onto one naming scheme was considered and
+rejected — it would make the two most common cases strictly less readable for no
+benefit, since nothing downstream actually needs the names unified. What *is*
+unified is the formatting machinery that turns a discovered Lagrangian into
+readable, grouped, coefficient-snapped text (`finding_L/report.py`, §5): it was
+always naming-agnostic internally, just gated behind a `q_i/v_i`-specific entry
+point, so all three conventions now get the same quality of output.
 
 ### 1. Dataset generation — `experiments/generate_dataset.py`, `generation/`
 
@@ -111,31 +121,54 @@ initial conditions with RK4, adds Gaussian noise scaled per column by
 `noisePercentage · std`, and streams rows to CSV. The ground truth is a known
 `L`, so recovery can be scored exactly and the noise model is explicit.
 
-### 2. Candidate library — `finding_L/candidates.py`
+### 2. Candidate library — `finding_L/higher_order_candidates.py`
 
-All monomials in `(q_i, q̇_i)` of total degree `1..maxDegree`, de-duplicated by
-exponent tuple; pure-velocity monomials are dropped (they add nothing to the EL
-residual structure). The kinetic term `Σ q̇_i²` is appended and is the regression
-target. This turns "find a function" into "find sparse coefficients over a fixed
-basis" — a linear problem once the EL operator is applied.
+One general library builder over `(order, noFields)`: `multiFieldLibrary` forms
+all monomials of total degree `1..maxDegree` in the state-symbol grid
+`s{field}_{level}` (`level = 0..order`), de-duplicated by exponent tuple, then
+`multiFieldMonomialToCoordinates` maps each into functional space. Order 1 is
+this construction's exact special case, not a separate code path:
+`buildCandidateLibrary(coords, vels, maxDegree)` — the 2nd-order library, in
+familiar `(q_i, q̇_i)` functional terms — is a thin wrapper around
+`multiFieldLibrary(noFields, 1, maxDegree)`. Pure-velocity (more generally,
+pure-top-derivative) monomials are dropped by `filterPureVelocityTerms`, and
+this pre-filter matters more than it looks: the kinetic term `Σ q̇_i²` is *itself*
+exactly the sum of the individual `q̇_i²` monomials, so without the filter the
+regression can trivially "recover" `−Σ q̇_i²` from its own additive pieces and
+stop there — a real linear degeneracy in the candidate space, not a redundant
+safety check. The kinetic term is appended and is the regression target. This
+turns "find a function" into "find sparse coefficients over a fixed basis" — a
+linear problem once the EL operator is applied.
 
-### 3. Streaming Gram matrix — `finding_L/build_matrix.py`
+### 3. Gram-matrix construction — `finding_L/build_matrix.py`
 
-For each candidate `θ`, its Euler–Lagrange column `EL(θ) = d/dt ∂θ/∂q̇ − ∂θ/∂q`
-is formed (with `q̈_i` substituted as an independent data symbol), lambdified once
-(cached across degree expansions), evaluated on the CSV in row chunks, and
-sub-chunked to a cell budget (`GRAM_DENSE_CELL_BUDGET`, peak RSS ~1 GB). The
-accumulators are the row count `n`, the column sums, and `G = Θᵀ Θ`.
+For each candidate `θ`, its Euler–Lagrange column
+`EL(θ) = Σ_k (−d/dt)^k ∂θ/∂q^(k)` (`generation/ostrogradski.py`'s general
+operator, §6 — order 1 reduces exactly to `d/dt ∂θ/∂q̇ − ∂θ/∂q`) is formed with
+the needed derivative levels substituted as independent data symbols, lambdified
+once (cached across degree expansions), and evaluated in chunks. Accumulation —
+row count `n`, column sums, `G = Θᵀ Θ` — is one shared, naming-agnostic core,
+`accumulateGramFromChunks`: it only consumes `theta` chunks, however they were
+produced, so it doesn't care whether the underlying candidate representation is
+`(q_i, q̇_i)` or a state-symbol grid. Two producers feed it:
 
-The model being fit: the discovered `L` must satisfy the observed equations of
-motion,
+- **CSV-streamed** (`csvThetaChunks`) — for the 2nd-order path, where the design
+  matrix `Θ` (one row per data point × coordinate, one column per candidate)
+  would never fit in memory: a degree-4 library on 6 DOF is ~23 GB unmaterialised.
+  Sub-chunked to a cell budget (`GRAM_DENSE_CELL_BUDGET`, peak RSS ~1 GB).
+- **Dense, single-chunk** — for higher-derivative recovery
+  (`recoverHigherOrderLagrangian`, `recoverMultiFieldHigherOrderLagrangian`),
+  where the candidate matrix already fits in memory (it comes from a handful of
+  differentiated trajectories, not a streamed CSV) — the same accumulator called
+  once on the whole matrix, replacing what used to be a bare `Θᵀ Θ`.
+
+The model being fit is the same either way: the discovered `L` must satisfy the
+observed equations of motion,
 
 ```
 EL(kinetic) + Σ_j c_j · EL(θ_j) ≈ 0     over all data rows
 ```
 
-The design matrix `Θ` (one row per data point × coordinate, one column per
-candidate) is never materialised — for a degree-4 library on 6 DOF it is ~23 GB.
 `G` is `n_candidates × n_candidates`; everything downstream needs only `G` and
 `b = −G[:, kinetic]`.
 
@@ -147,10 +180,16 @@ set far further into measurement noise than greedy does (see **Results** and
 **Open problems A**); it builds the Gram once at `degreeCap` and selects in one
 shot. `selector="greedy"` is the earlier path, kept reachable and tested, and is
 what the round-by-round diagnostics (`roundCallback`, the visualisation scripts)
-exercise. Both consume only `G` and `b = −G[:, kinetic]`.
+exercise. Both consume only `G` and `b = −G[:, kinetic]`. The higher-derivative
+recovery functions (`higher_order_discovery.forwardSelectFromGram`) run the same
+greedy shape, simplified (no degree expansion, since their library is already at
+full degree before selection starts).
 
-**Greedy** (`selector="greedy"`) — orthogonal-matching-pursuit style. Per round,
-with active set `S`:
+**Greedy** — orthogonal-matching-pursuit style. Per round, with active set `S`,
+the fit/score/stall step is one shared primitive,
+`gram_forward_select.greedyRoundStep`, used by both `runDiscoveryStreaming`'s
+loop (below) and `forwardSelectFromGram` — each caller keeps its own outer
+orchestration, only the inner step is shared code:
 
 1. **Refit** — `c_S = solve(G[S,S], b[S])`
    (`fitActiveCoefficientsFromGram`). A singular block falls back to `lstsq` and
@@ -162,7 +201,8 @@ with active set `S`:
    `score_j = (b_j − c_S · G[j, S]) / (‖θ_j‖ · ‖r‖)`, the cosine between
    candidate `j`'s EL column and the current residual. Take `argmax |score|`.
 4. **Select or expand** — add the best candidate if
-   `|score| ≥ correlationCutoff`; otherwise attempt a degree expansion.
+   `|score| ≥ correlationCutoff`; otherwise (`runDiscoveryStreaming` only)
+   attempt a degree expansion.
 5. After the loop, `pruneNearZeroCoefficients` iteratively drops any active term
    with `|c| < pruneRelativeThreshold · max|c|` and refits.
 
@@ -222,10 +262,12 @@ equivalence check below exact rather than approximate.
 
 1. `ΔL = expand(A − B)`. `ΔL == 0` → identical.
 2. `isNullLagrangian(ΔL)` applies the Euler–Lagrange operator and checks every
-   component reduces to `0` (`expand`, then `simplify`). Order-aware: order 1
-   uses the ordinary EL operator (`eqnofmotion.EulerLagrangeEqn`); order ≥ 2 uses
-   the full Ostrogradski operator (`ostrogradski.eulerLagrangeExpression`); order
-   defaults to the highest derivative present.
+   component reduces to `0` (`expand`, then `simplify`) — the general Ostrogradski
+   operator (`ostrogradski.eulerLagrangeExpression(..., pipelineSign=True)`) for
+   any order, order 1 included: it's that operator's exact algebraic special
+   case, not a separate code path (verified independently by two of the three
+   agents who worked on this codebase's generation/finding_L unification, down
+   to the sign convention). Order defaults to the highest derivative present.
 3. If null and first-order, `reconstructBoundaryPotential` recovers `F` with
    `ΔL = dF/dt` (curl-free check, then integrate the velocity coefficients).
 4. Otherwise `verifyEquivalenceClass(B, A, coords, vels)` tests the full action
@@ -254,17 +296,19 @@ discovered-vs-expected pair; the noise sweep surfaces it per level as `exact`
 the recovery failed even if the coefficients looked close). The higher-derivative
 studies call `isNullLagrangian` directly.
 
-### 7. Higher-derivative track — `finding_L/higher_order_*.py`, `generation/ostrogradski*.py`
+### 7. Single-field higher-derivative recovery — `finding_L/higher_order_discovery.py`
 
-Same shape as steps 2–5, single-coordinate, with an explicit Lagrangian order.
-`higher_order_candidates.py` builds monomials in `(q, q', q'', …)`; each
-candidate's EL column uses the full Ostrogradski operator, and
-`dropKineticAliasColumns` removes columns collinear with the kinetic column (the
-exact `q''² ↔ q' q'''` alias). `recoverHigherOrderLagrangian` builds a dense Gram
-matrix, runs `forwardSelectFromGram`, and snaps coefficients. Noisy derivatives
-come from `generation/numerical_diff.py`; the quintic smoothing spline is the
-only method that survives to 3rd/4th order. On Pais–Uhlenbeck it recovers `L` up
-to a total derivative, robust to ~3 % noise.
+`recoverHigherOrderLagrangian` is §2–5's general machinery specialised to one
+field with an explicit Lagrangian order above 1: build the library
+(`buildHigherOrderLibrary`, the `noFields=1` case of §2's grid, in the plainer
+bare-`s{level}` notation since a field index would be redundant — §"Symbol
+conventions"), build the Gram (§3), `dropKineticAliasColumns` removes columns
+collinear with the kinetic column (the exact `q''² ↔ q' q'''` alias), then
+select (§4) and snap. `assembleDiscoveredHigherOrderLagrangian` wraps this with
+the same readable/grouped `.text` output §5 gives the 2nd-order path. Noisy
+derivatives come from `generation/numerical_diff.py`; the quintic smoothing
+spline is the only method that survives to 3rd/4th order. On Pais–Uhlenbeck it
+recovers `L` up to a total derivative, robust to ~3 % noise.
 
 ### 8. Ghost detection — `generation/ghost_detection.py`
 
@@ -356,15 +400,19 @@ solvable variety.
   clean data, and — with `numerical_diff.segmentedDerivatives` (a spline per
   trajectory, unstable edges trimmed) — from ~0.03 % position noise
   (Open problem D).
-- `inferLagrangianOrder` tries orders `1..maxOrder`; for each it measures the
-  least-squares residual of projecting the `q^(n)²` kinetic EL column onto the
-  span of the other EL columns (a feasibility test: does the data satisfy an
-  order-`n` Euler–Lagrange equation?). It returns the smallest order below
+- `inferLagrangianOrder(..., noFields=1)` tries orders `1..maxOrder`; for each
+  it measures the least-squares residual of projecting the summed
+  `Σ_i q_i^(n)²` kinetic EL column onto the span of the other EL columns (a
+  feasibility test: does the data satisfy an order-`n` Euler–Lagrange
+  equation?) — general over field count via §2's library, `noFields=1` its
+  exact single-field case (verified: identical output to the pre-generalisation
+  single-field-only implementation). It returns the smallest order below
   tolerance (Condition A), else the order after which the residual stops
-  improving (Condition C). PU → 2, anharmonic oscillator → 1. Each `perOrder`
-  record also carries a `degenerate` flag (kept-EL-matrix numerical rank `≤ 1`):
-  a purely linear order-1 system tests as feasible at every order, so its zero
-  residual is labelled rather than trusted (Open problem F).
+  improving (Condition C). PU → 2, anharmonic oscillator → 1, a 2-field coupled
+  PU chain → 2. Each `perOrder` record also carries a `degenerate` flag
+  (kept-EL-matrix numerical rank `≤ 1`): a purely linear order-1 system tests
+  as feasible at every order, so its zero residual is labelled rather than
+  trusted (Open problem F).
 - `recoverHigherOrderLagrangian(..., orderPrior=True)` uses that verdict as a
   hard prior: an over-specified order request is reduced to the inferred order
   (columns truncated, library shrunk) before selection, so an on-shell
@@ -373,13 +421,15 @@ solvable variety.
 
 ### 11. End-to-end pipeline — `finding_L/pipeline.py`
 
-`endToEndPipeline(noisyPositions, dt)` chains the pieces with no ground-truth
-input:
+`endToEndPipeline(noisyPositions, dt, noFields=1)` chains the pieces with no
+ground-truth input:
 
 1. For each differentiation method (Savitzky–Golay, SG poly-8, quintic spline):
-   estimate derivatives → `inferLagrangianOrder` → `recoverHigherOrderLagrangian`
-   → `detectGhost`, and record the recovered Lagrangian's *own* Euler–Lagrange
-   residual on that method's derivatives.
+   estimate derivatives → `inferLagrangianOrder` → recover (single-field:
+   `recoverHigherOrderLagrangian`; multi-field, `noFields>1`:
+   `recoverMultiFieldHigherOrderLagrangian`) → `detectGhost`, and record the
+   recovered Lagrangian's *own* Euler–Lagrange residual on that method's
+   derivatives.
 2. Consensus order = majority vote. Method selection = among recoveries with
    plausible (not absurdly large) coefficients, the lowest own-EL residual.
 3. Three confidences: **order** (cross-method agreement), **ghost** (agreement on
@@ -388,6 +438,12 @@ input:
    reported separately because the differentiation step limits them. On PU: order
    2 and ghost True with full cross-method agreement through ≥ 1 % noise; the
    coefficients drift with noise.
+
+Multi-field order inference through this pipeline is robust (verified: full
+cross-method agreement on a coupled PU chain at zero noise). Ghost-verdict
+reliability for the multi-field case is a live area, not yet closed — see
+**Open problems** for the current, specific findings rather than a summary
+here that would go stale as that work lands.
 
 ### 12. Regularisation-path selectors — `finding_L/regularized_select.py`
 
@@ -411,6 +467,32 @@ multiple seeds and every system in `SYSTEMS`, on one degree-`degreeCap` streamin
 Gram (via `build_matrix.buildAdmissibleGram`) per system and noise level; see
 **Results**.
 
+### 13. One general entry point — `finding_L/main.py`
+
+`discoverLagrangian(trajectory, dt=None, noFields=None, maxOrder=3,
+libraryMaxDegree=None, degreeCap=4, chunkRows=200_000, selector="lasso")`
+dispatches on the type of `trajectory`, replacing both
+`finding_L/main_streaming.py`'s role and the ad hoc `__main__` blocks the
+higher-derivative studies used to need:
+
+- **A CSV path** (`str`/`Path`) — the known-derivatives, large-`N` case — routes
+  through `runDiscoveryStreaming` (§3's streamed front door, §4's selectors).
+  `noFields` is inferred from the header's bare `q{i}` columns if not given.
+  Returns a `DiscoveredLagrangian` (§5).
+- **An array of noisy positions** (`dt` required; 1-D for one field, `(steps,
+  noFields)` for several) — the no-ground-truth case — routes through
+  `endToEndPipeline` (§11). `noFields` is inferred from the array's shape if not
+  given. Returns a `PipelineResult` (§11).
+
+The two return types are deliberately not forced into one shape: the streamed
+path has no order-inference or ghost step, the pipeline path does — unifying
+them would either drop real information or fabricate fields that don't apply.
+**Honest scope limit:** the CSV path still only supports order 1 — a
+general-order CSV front door needs `build_matrix.py`'s column *reading*
+generalised too (currently hardcoded to the legacy `q{i}`/`q{i}dot`/`q{i}ddot`
+names), which only its Gram *accumulation* (§3) actually became general over;
+nothing currently needs it, so it was left undone rather than half-built.
+
 ---
 
 ## Repo structure
@@ -423,9 +505,9 @@ no comments or docstrings by design — the explanation lives in this file.
 
 | module | contents |
 |---|---|
-| `eqnofmotion` | the single `TIME` symbol, `defineCoordinates`, the ordinary Euler–Lagrange operator |
-| `integrator`, `higher_order_integrator` | RK4 for 2nd-order and higher-order state |
-| `generate_data`, `noise` | streamed noisy-trajectory CSV generation |
+| `eqnofmotion` | the single `TIME` symbol, `defineCoordinates` — the shared coordinate/symbol factory every other module builds on. `EulerLagrangeEqn` is a retained legacy order=1 operator, kept only for `pu_oscillator_validation.py`'s deliberate legacy-vs-Ostrogradski cross-check; nothing else calls it — `integrator.GetAccelFunctions` and `finding_L`'s EL-column evaluators route through the general `ostrogradski` operator instead |
+| `integrator`, `higher_order_integrator` | RK4 for 2nd-order and higher-order state. `integrator.GetAccelFunctions` keeps its original signature but now solves via `ostrogradski.solveTopDerivatives(order=1)` internally; `higher_order_integrator.rk4Step` is the one RK4 core both paths share |
+| `generate_data`, `noise` | streamed noisy-trajectory CSV generation — `generateDatasetStreaming` (2nd-order, `q`/`q{c}dot`/`q{c}ddot` columns) plus the general `generateHigherOrderDatasetStreaming` (arbitrary `(order, noCoords)`, `q{c}_d{level}` columns including the top derivative as an independent data column, same role `qddot` plays for order 1) |
 | `ostrogradski` | Ostrogradski EL operator `Σ (−d/dt)^k ∂L/∂q^(k)`, top-derivative solve, RK4 state derivative — arbitrary order, arbitrary `coords` length |
 | `ostrogradski_hamiltonian` | canonical momenta and Hamiltonian; `NonUniqueTopDerivativeError`; `analyzeDegenerateLagrangian` |
 | `constraints` | canonical Poisson bracket, weak (on-shell) vanishing, first/second-class classification, the Dirac–Bergmann secondary-constraint iteration, the second-class Dirac bracket |
@@ -437,22 +519,31 @@ no comments or docstrings by design — the explanation lives in this file.
 
 | module | contents |
 |---|---|
-| `candidates`, `higher_order_candidates` | monomial libraries; `buildMultiFieldElMatrix` for coupled fields |
-| `build_matrix` | the streaming Gram matrix `G = Θᵀ Θ` (chunked, cell-budgeted); `buildAdmissibleGram` streams `G` and drops zero-variance columns |
-| `gram_forward_select` | fit / score / prune primitives on `G` |
-| `stopping_conditions` | the three stopping conditions (greedy path) |
+| `main` | `discoverLagrangian` — the one general entry point (§13), CSV path or noisy-position array in |
+| `higher_order_candidates` | the one candidate-library builder, general over `(order, noFields)` (§2); `monomialLibrary`, `multiFieldLibrary`/`stateGridSymbols`, `buildMultiFieldElMatrix`, and the 2nd-order-shaped `buildCandidateLibrary`/`filterPureVelocityTerms` (thin wrappers around the general form) |
+| `build_matrix` | the shared, naming-agnostic Gram-accumulation core `accumulateGramFromChunks` (§3), fed by either `csvThetaChunks` (2nd-order, chunked, cell-budgeted) or a single dense chunk (higher-derivative); `buildAdmissibleGram` streams `G` and drops zero-variance columns |
+| `gram_forward_select` | fit / score / prune primitives on `G`, plus the shared per-round step `greedyRoundStep` (§4) both selector paths build on |
+| `stopping_conditions` | the three stopping conditions (`runDiscoveryStreaming`'s greedy path) |
 | `regularized_select` | STLSQ and debiased-LASSO selectors, Gram-only; `lassoSelect` is the production 2nd-order selector |
-| `main_streaming` | `runDiscoveryStreaming(selector=…)` — the 2nd-order discovery driver (LASSO default, greedy optional) |
-| `higher_order_discovery` | `recoverHigherOrderLagrangian`, `recoverMultiFieldHigherOrderLagrangian`, `forwardSelectFromGram`, `inferLagrangianOrder` |
-| `pipeline` | `endToEndPipeline` — noisy positions → `L` + ghost verdict + confidences |
-| `report` | `assembleDiscoveredLagrangian`, coefficient snapping, the readable text |
-| `equivalence_class` | `classifyLagrangianPair` / `verifyEquivalenceClass` / `isNullLagrangian` — null-Lagrangian + scale-factor test, order-aware |
+| `main_streaming` | `runDiscoveryStreaming(selector=…)` — the 2nd-order discovery driver (LASSO default, greedy optional); superseded as the recommended entry point by `main.discoverLagrangian`, kept as the underlying driver |
+| `higher_order_discovery` | `recoverHigherOrderLagrangian`, `recoverMultiFieldHigherOrderLagrangian`, `forwardSelectFromGram`, `inferLagrangianOrder(..., noFields=…)`, and the readable-report wrappers `assembleDiscoveredHigherOrderLagrangian`/`assembleDiscoveredMultiFieldLagrangian` |
+| `pipeline` | `endToEndPipeline(..., noFields=…)` — noisy positions → `L` + ghost verdict + confidences, single- or multi-field |
+| `report` | the naming-agnostic formatting core `assembleDiscoveredLagrangianFromState` (§ Symbol conventions, §5) plus `assembleDiscoveredLagrangian`, its thin `q_i/v_i`-converting wrapper; coefficient snapping, the readable text |
+| `equivalence_class` | `classifyLagrangianPair` / `verifyEquivalenceClass` / `isNullLagrangian` — null-Lagrangian + scale-factor test, via the one general Ostrogradski EL operator for any order |
 
 ### `experiments/` — benchmarks and runnable studies
 
-`systems` (2nd-order benchmarks), `pu_system` (Pais–Uhlenbeck helpers),
-`generate_dataset`, `discovery` (the frozen-tolerance policy + `compareToExpected`),
-and the studies listed under **How to use**.
+`systems` and `pu_system` share one `PhysicalSystem` record shape:
+`buildLagrangian(coords) -> (L, constants)` — no `vels` argument, a builder
+derives whatever velocity/higher-derivative terms it needs internally via
+`sp.diff`, and a system's order is never stored, only recovered on demand via
+`ostrogradski.lagrangianOrder`. `systems.SYSTEMS` holds the 2nd-order
+benchmarks; `pu_system.HD_SYSTEMS` holds the higher-derivative ones (currently
+`pais_uhlenbeck`) in the same record shape, kept alongside `SYSTEMS` rather
+than merged into it, since `discovery.py`'s driver is still 2nd-order-only.
+`generate_dataset`, `discovery` (the frozen-tolerance policy +
+`compareToExpected`), and the studies listed under **How to use** are
+unchanged.
 
 ---
 
@@ -482,7 +573,8 @@ $PY -m experiments.generate_dataset anharmonic_chain_blind --noise 0.0 0.05 0.10
 $PY -m generation.main                            # the isotropic calibration system's CSVs
 
 # 2. recover a Lagrangian from a dataset (readable report to stdout)
-$PY -m finding_L.main_streaming                    # __main__ points at a generated CSV
+$PY -m finding_L.main                              # discoverLagrangian; __main__ points at a generated CSV
+$PY -m finding_L.main assets/some_dataset.csv      # or any other trajectory CSV
 
 # 3. 2nd-order discovery vs measurement noise
 $PY -m experiments.noise_robustness_sweep isotropic_quartic_calibration   # reference system
@@ -513,15 +605,26 @@ Each study writes `.txt` / `.json` (and some `.png`) into
 `src/experiments/results/`. Datasets under `assets/` are git-ignored and
 regenerable (the generators are seeded).
 
-Programmatic use:
+Programmatic use — one entry point regardless of order or field count (§13):
 
 ```python
-from finding_L.main_streaming import runDiscoveryStreaming
+from finding_L.main import discoverLagrangian
 
-discovered, log = runDiscoveryStreaming("trajectories.csv", noCoords=6, degreeCap=4)
-print(discovered.text)     # readable, grouped, coefficients snapped to rationals
-discovered.expression      # sympy expression in clean q0, v0, … symbols
+# a CSV of known trajectories (2nd-order today)
+discovered = discoverLagrangian("trajectories.csv", noFields=6)
+print(discovered.text)         # readable, grouped, coefficients snapped to rationals
+discovered.expression          # sympy expression in clean q0, v0, … symbols
+
+# noisy positions only, order/field count inferred — 1-D or (steps, noFields)
+result = discoverLagrangian(noisy_positions, dt=0.004)
+print(result.summary())        # order, ghost verdict, confidences, per-method breakdown
 ```
+
+The underlying drivers (`finding_L.main_streaming.runDiscoveryStreaming`,
+`finding_L.pipeline.endToEndPipeline`) are still there and still the right
+choice when a caller needs their extra knobs (`roundCallback`, `orderPrior`,
+explicit selector/tolerance overrides) — `discoverLagrangian` wraps them for
+the common case, it doesn't replace their APIs.
 
 ---
 
@@ -531,20 +634,32 @@ discovered.expression      # sympy expression in clean q0, v0, … symbols
 uv run pytest
 ```
 
-70 tests. Core: EL / Ostrogradski Hamiltonian vs closed form; the Pais–Uhlenbeck
-EOM and Hamiltonian conservation; the equivalence-class classifier both ways;
-forward selection, STLSQ and LASSO on synthetic Gram matrices; the
-frozen-tolerance discipline (selector included); degenerate-constraint
-classification, the Dirac–Bergmann secondary-constraint chain and the
-second-class Dirac bracket; two-field mixing; multi-field higher-order recovery;
-the end-to-end pipeline; the ghost ROC battery. Open-problem regressions: the
-debiased-LASSO streaming path recovers a clean quartic where greedy needs it
-(A); the order prior collapses an over-specified order request on-shell (B); the
-blind chain recovers all six sites including the boundary under the LASSO
+102 tests. Core: EL / Ostrogradski Hamiltonian vs closed form; the Pais–Uhlenbeck
+EOM and Hamiltonian conservation; the equivalence-class classifier both ways
+(including that the order-1 and general-Ostrogradski EL paths now agree
+exactly, not just approximately); forward selection, STLSQ and LASSO on
+synthetic Gram matrices; the frozen-tolerance discipline (selector included);
+degenerate-constraint classification, the Dirac–Bergmann secondary-constraint
+chain and the second-class Dirac bracket; two-field mixing; multi-field
+higher-order recovery and order inference; the single- and multi-field
+end-to-end pipeline; the ghost ROC battery; `canonicalizeLagrangian`'s
+same-field cross-derivative reduction (sign tracking, odd-gap vanishing,
+no-ops on already-diagonal and cross-field terms) and its
+`isNullLagrangianLocal` safety net; `characteristicRoots`' coupled-system
+determinant path against single-field and decoupled-multi-field legacy
+behavior, a genuinely coupled system, and full `detectGhost` invariance under
+a null-Lagrangian representative swap; the one general entry point
+(`finding_L.main`) against both a CSV and a noisy-position array; the readable
+report's naming-agnostic core against all three symbol conventions. Open-problem
+regressions: the debiased-LASSO streaming path recovers a clean quartic where
+greedy needs it (A); the order prior collapses an over-specified order request
+on-shell (B); the blind chain recovers all six sites including the boundary
+under the LASSO
 default (C); segment-wise differentiation recovers the coupled PU chain from
 sub-percent noise (D); `polynomialBoundedBelow` and its `detectGhost` verdicts
 on non-quadratic `H` (E); the order-inference degeneracy flag on a linear
-order-1 system (F).
+order-1 system (F); the multi-field pipeline's ghost verdict is now reliably
+correct rather than merely valid (G).
 
 ---
 
@@ -728,6 +843,15 @@ requested order when the inference it rests on is degenerate. A genuine
 disambiguation still needs data that excites the higher-frequency mode — a
 harmonic trajectory simply does not contain the information.
 
+### G. `detectGhost` broke on legitimately-recovered multi-field Lagrangians — resolved, two separate causes
+
+The multi-field pipeline's ghost verdict (§11) was unreliable for a reason distinct from differentiation accuracy (D): `detectGhost` could return the wrong verdict, or crash, on a Lagrangian that `recoverMultiFieldHigherOrderLagrangian` had legitimately recovered — correct up to the total-derivative freedom the equivalence-class check (§6) is built to recognize as the same theory. Two independent bugs, both in `generation/`:
+
+1. **`ostrogradski_hamiltonian.ostrogradskiHamiltonian`'s canonical momenta are not invariant under `L → L + dF/dt`.** A recovered Lagrangian can land on a null-Lagrangian-equivalent-but-non-canonical monomial (e.g. `q q̈` instead of `−q̇²` — related by `d/dt(qq̇) = q̇² + qq̈`, so a same-field cross-derivative-order term either reduces to a diagonal term with a sign flip, or, when the derivative-order gap is odd, is *exactly* a total derivative and contributes nothing) — and the Legendre transform, having no notion of this equivalence, could fail to invert or read a spuriously different boundedness. **Fix:** `generation/ostrogradski.canonicalizeLagrangian(lagrangian, coords, order)` reduces same-field cross-derivative monomials via repeated integration by parts before the Legendre transform runs, verified against the original by a self-contained EL-residual check (`isNullLagrangianLocal`, built on the existing `eulerLagrangeExpression` — not borrowed from `finding_L`, to keep `generation/` independent of it) before being trusted. **Scope, stated rather than oversold:** same-field only. Cross-*field* odd-derivative-order monomials (`q_i^(a) q_j^(b)`) are *not* droppable the same way — only the symmetric combination `q_i^(a)q_j^(b) + q_i^(b)q_j^(a)` is a total derivative; the antisymmetric part is a genuine gyroscopic-type coupling term, and dropping it would be a real error, not a cosmetic one. Left as an explicit follow-on (below), not attempted.
+2. **`characteristicRoots` never supported coupled multi-field systems at all.** It substituted only each coordinate's *own* derivatives with powers of the growth-rate symbol — any coupling term left the other coordinate's symbol unresolved in a `Poly` coefficient, raising `Cannot convert expression to float`, independent of canonicalization. **Fix:** the standard normal-mode analysis for coupled linear oscillators — substitute `q_j^{(k)} → A_j·s^k` (one amplitude per coordinate) across the whole Euler–Lagrange system at once, build `M_{ij} = ∂(\text{equation}_i)/∂A_j`, and solve `det(M(s)) = 0`, rather than finding each coordinate's roots independently (only valid once the system is already decoupled). A single coordinate, or an already-decoupled multi-field system, gives the same physical roots as before (verified by a dedicated regression test, not just the math). A genuinely nonlinear self-term — which the pre-existing single-coordinate code never checked for either, and got away with via an ad hoc amplitude-collapse — falls back to that same legacy per-coordinate computation rather than a strict linearity rejection, so existing nonlinear-Lagrangian ghost verdicts are unaffected.
+
+The originally-diagnosed case (a 2-field coupled Pais–Uhlenbeck chain, segmented differentiation, ~3×10⁻⁴ noise) now reads `ghost = True` reliably — confirmed stable across multiple Python hash seeds, since sympy's own hash-order-dependent internals were adding an unrelated source of run-to-run variance during diagnosis. Still open, deliberately: cross-field odd-derivative-order canonicalization (item 1's stated scope limit).
+
 ---
 
 ## Roadmap
@@ -742,4 +866,18 @@ harmonic trajectory simply does not contain the information.
   `inconclusive` case of the non-quadratic boundedness test (E).
 - A joint multi-field smoother (or longer trajectories) to close the residual
   differentiation-accuracy gap in multi-field higher-order recovery (D).
-- Multi-field extension of the end-to-end pipeline.
+- ~~Multi-field extension of the end-to-end pipeline~~ — done:
+  `endToEndPipeline(..., noFields=…)`. ~~Multi-field ghost-verdict reliability
+  through the pipeline~~ — done, see Open problem G: two independent bugs in
+  `generation/` (null-Lagrangian-representative sensitivity, and coupled-system
+  support in `characteristicRoots`), both resolved.
+- Cross-field canonicalization (Open problem G, item 1's stated scope limit):
+  odd-derivative-order monomials between *different* fields need an explicit
+  symmetric/antisymmetric split before any term can be dropped — same-field
+  reduction alone doesn't generalize to this case by just allowing `i≠j`.
+- A general-order CSV front door: `build_matrix.py`'s Gram *accumulation* is
+  already general over `(order, noFields)` (naming-agnostic, shared with the
+  higher-derivative dense path), but its CSV *column reading* is still
+  hardcoded to the legacy 2nd-order `q{i}`/`q{i}dot`/`q{i}ddot` names — nothing
+  currently needs a streamed higher-derivative CSV path, so this was left
+  undone rather than built and untested.
