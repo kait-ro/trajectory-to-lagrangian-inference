@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
 from finding_L.build_matrix import buildGramMatrixChunked
-from finding_L.candidates import buildCandidateLibrary, filterPureVelocityTerms
+from finding_L.higher_order_candidates import buildCandidateLibrary, filterPureVelocityTerms
 from finding_L.regularized_select import _lstsqOnActive, lassoPathFromGram
 from generation.eqnofmotion import TIME, defineCoordinates
 from matplotlib.animation import FuncAnimation, PillowWriter
