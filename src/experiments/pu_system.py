@@ -1,5 +1,3 @@
-"""Pais–Uhlenbeck trajectory generators and multi-field ground-truth data for higher-order dynamics."""
-
 import numpy as np
 import sympy as sp
 from finding_L.higher_order_candidates import stateGridSymbols, stateVariableSymbols
