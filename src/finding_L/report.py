@@ -168,25 +168,19 @@ def formatLagrangian(kineticState, snappedExpression, contributions):
     return "\n".join(lines)
 
 
-def assembleDiscoveredLagrangian(
-    kineticTerm,
-    discoveredTerms,
-    coords,
-    vels,
+def assembleDiscoveredLagrangianFromState(
+    kineticState,
+    discoveredStateTerms,
     snapRelativeTolerance=0.01,
     relativeZeroFloor=1e-3,
 ):
-    stateSymbolMap = buildStateSymbolMap(coords, vels)
-    kineticState = toStateExpression(kineticTerm, stateSymbolMap)
-
-    magnitudes = [abs(float(coefficient)) for _, coefficient in discoveredTerms]
+    magnitudes = [abs(float(coefficient)) for _, coefficient in discoveredStateTerms]
     zeroThreshold = relativeZeroFloor * max(magnitudes, default=0.0)
 
     contributions = []
     rawExpression = kineticState
     snappedExpression = kineticState
-    for term, coefficient in discoveredTerms:
-        monomial = toStateExpression(term, stateSymbolMap)
+    for monomial, coefficient in discoveredStateTerms:
         rawCoefficient = float(coefficient)
         snappedCoefficient = snapCoefficient(rawCoefficient, snapRelativeTolerance, max(zeroThreshold, 1e-7))
 
@@ -201,3 +195,21 @@ def assembleDiscoveredLagrangian(
     text = formatLagrangian(kineticState, snappedExpression, contributions)
 
     return DiscoveredLagrangian(snappedExpression, rawExpression, kineticState, contributions, text)
+
+
+def assembleDiscoveredLagrangian(
+    kineticTerm,
+    discoveredTerms,
+    coords,
+    vels,
+    snapRelativeTolerance=0.01,
+    relativeZeroFloor=1e-3,
+):
+    stateSymbolMap = buildStateSymbolMap(coords, vels)
+    kineticState = toStateExpression(kineticTerm, stateSymbolMap)
+    discoveredStateTerms = [
+        (toStateExpression(term, stateSymbolMap), coefficient) for term, coefficient in discoveredTerms
+    ]
+    return assembleDiscoveredLagrangianFromState(
+        kineticState, discoveredStateTerms, snapRelativeTolerance, relativeZeroFloor
+    )
