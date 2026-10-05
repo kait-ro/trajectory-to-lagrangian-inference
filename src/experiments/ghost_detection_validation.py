@@ -9,7 +9,7 @@ from finding_L.higher_order_discovery import (
     recoverHigherOrderLagrangian,
     stateToCoordinate,
 )
-from finding_L.pipeline import endToEndPipeline
+from finding_L.main import discoverLagrangian
 from generation.eqnofmotion import TIME, defineCoordinates
 from generation.ghost_detection import detectGhost
 from generation.higher_order_integrator import simulateHigherOrderTrajectory
@@ -152,7 +152,7 @@ def rocReport(noiseLevels=(0.0, 0.002, 0.005, 0.01), seeds=(0, 1, 2)):
                 rng = np.random.default_rng(1000 + seed)
                 noisy = clean + rng.normal(0.0, noiseLevel * clean.std(), clean.shape)
                 try:
-                    result = endToEndPipeline(noisy, dt, maxOrder=2, libraryMaxDegree=4)
+                    result = discoverLagrangian(noisy, dt=dt, maxOrder=2, libraryMaxDegree=4)
                     verdict = result.ghost
                 except Exception:
                     verdict = None
