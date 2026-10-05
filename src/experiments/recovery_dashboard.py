@@ -10,7 +10,7 @@ import numpy as np
 import sympy as sp
 from experiments.discovery import FROZEN_TOLERANCES, compareToExpected
 from finding_L.build_matrix import buildGramMatrixChunked
-from finding_L.candidates import buildCandidateLibrary, filterPureVelocityTerms
+from finding_L.higher_order_candidates import buildCandidateLibrary, filterPureVelocityTerms
 from finding_L.higher_order_discovery import forwardSelectFromGram
 from finding_L.main_streaming import runDiscoveryStreaming
 from finding_L.regularized_select import lassoSelect, sequentialThresholdedLeastSquares
