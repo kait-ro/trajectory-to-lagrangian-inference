@@ -1,8 +1,25 @@
+import itertools
+
 import numpy as np
 import sympy as sp
-from finding_L.candidates import monomialLibrary
 from generation.eqnofmotion import defineCoordinates
 from generation.ostrogradski import TIME, eulerLagrangeExpression
+
+
+def monomialLibrary(symbols, maxDegree):
+    library = []
+    seen = set()
+    for degree in range(1, maxDegree + 1):
+        for combo in itertools.combinations_with_replacement(range(len(symbols)), degree):
+            key = tuple(sorted(combo))
+            if key in seen:
+                continue
+            seen.add(key)
+            monomial = sp.Integer(1)
+            for index in combo:
+                monomial = monomial * symbols[index]
+            library.append(sp.expand(monomial))
+    return library
 
 
 def stateVariableSymbols(noStateVars):
@@ -98,6 +115,19 @@ def multiFieldMonomialToCoordinates(monomial, coords, noFields, lagrangianOrder)
                 coords[field] if level == 0 else sp.diff(coords[field], TIME, level)
             )
     return sp.sympify(monomial).subs(substitution)
+
+
+def buildCandidateLibrary(coords, vels, maxDegree):
+    noFields = len(coords)
+    stateLibrary = multiFieldLibrary(noFields, 1, maxDegree)
+    return [multiFieldMonomialToCoordinates(monomial, coords, noFields, 1) for monomial in stateLibrary]
+
+
+def filterPureVelocityTerms(candidateTerms, coords):
+    return [
+        term for term in candidateTerms
+        if any(sp.diff(term, q) != 0 for q in coords)
+    ]
 
 
 def buildMultiFieldElMatrix(library, noFields, lagrangianOrder, derivativeData):
