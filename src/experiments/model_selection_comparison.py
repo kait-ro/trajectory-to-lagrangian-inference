@@ -1,16 +1,20 @@
 import json
 import os
 
-from experiments.artifacts import RESULTS_DIR
-from experiments.discovery import FROZEN_TOLERANCES, compareToExpected
-from experiments.generate_dataset import datasetPath, generateSystemDatasets
-from experiments.systems import SYSTEMS
 from finding_L.build_matrix import buildAdmissibleGram
-from finding_L.candidates import buildCandidateLibrary, filterPureVelocityTerms
+from finding_L.higher_order_candidates import (
+    buildCandidateLibrary,
+    filterPureVelocityTerms,
+)
 from finding_L.higher_order_discovery import forwardSelectFromGram
 from finding_L.regularized_select import lassoSelect, sequentialThresholdedLeastSquares
 from finding_L.report import assembleDiscoveredLagrangian
 from generation.eqnofmotion import TIME, defineCoordinates
+
+from experiments.artifacts import RESULTS_DIR
+from experiments.discovery import FROZEN_TOLERANCES, compareToExpected
+from experiments.generate_dataset import datasetPath, generateSystemDatasets
+from experiments.systems import SYSTEMS
 
 DEGREE = FROZEN_TOLERANCES["degreeCap"]
 PRUNE = FROZEN_TOLERANCES["pruneRelativeThreshold"]
