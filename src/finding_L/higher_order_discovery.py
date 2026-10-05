@@ -1,11 +1,10 @@
 import numpy as np
 import sympy as sp
+from finding_L.build_matrix import accumulateGramFromChunks
 from finding_L.gram_forward_select import (
     checkResidualToleranceFromGram,
-    fitActiveCoefficientsFromGram,
+    greedyRoundStep,
     pruneNearZeroCoefficients,
-    residualNormSquaredFromGram,
-    scoreReserveCandidatesFromGram,
 )
 from finding_L.higher_order_candidates import (
     buildEulerLagrangeMatrix,
@@ -16,7 +15,7 @@ from finding_L.higher_order_candidates import (
     stateGridSymbols,
     stateVariableSymbols,
 )
-from finding_L.report import snapCoefficient
+from finding_L.report import assembleDiscoveredLagrangianFromState, snapCoefficient
 from finding_L.stopping_conditions import checkCorrelationCutoff
 from generation.eqnofmotion import defineCoordinates
 from generation.ostrogradski import TIME
@@ -44,6 +43,9 @@ def multiFieldStateToCoordinates(stateExpression, noFields, lagrangianOrder, coo
 
 
 def forwardSelectFromGram(gramMatrix, kineticIndex, maxRounds=25):
+    residualRmsTolerance = checkResidualToleranceFromGram.__defaults__[0]
+    correlationCutoff = checkCorrelationCutoff.__defaults__[0]
+
     b = -gramMatrix[:, kineticIndex]
     targetNormSq = gramMatrix[kineticIndex, kineticIndex]
     activeIndices = []
@@ -52,42 +54,34 @@ def forwardSelectFromGram(gramMatrix, kineticIndex, maxRounds=25):
     for _ in range(maxRounds):
         if not reserveIndices:
             break
-        coefficients = fitActiveCoefficientsFromGram(gramMatrix, b, activeIndices)
-        residualNormSq = residualNormSquaredFromGram(targetNormSq, b, activeIndices, coefficients)
-        converged, _scaled = checkResidualToleranceFromGram(residualNormSq, targetNormSq)
-        if converged:
-            break
-        bestLocal, bestScore, _scores = scoreReserveCandidatesFromGram(
-            gramMatrix, b, activeIndices, reserveIndices, coefficients, residualNormSq
+        step = greedyRoundStep(
+            gramMatrix, b, targetNormSq, activeIndices, reserveIndices, residualRmsTolerance, correlationCutoff
         )
-        stalled, _magnitude = checkCorrelationCutoff(bestScore)
-        if stalled:
+        if step["converged"] or step["stalled"]:
             break
-        chosen = reserveIndices[bestLocal]
-        activeIndices.append(chosen)
-        reserveIndices = [index for index in reserveIndices if index != chosen]
+        activeIndices.append(step["bestReserveIndex"])
+        reserveIndices = [index for index in reserveIndices if index != step["bestReserveIndex"]]
 
     return pruneNearZeroCoefficients(gramMatrix, b, activeIndices)
 
 
-def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
-    noStateVars = lagrangianOrder + 1
-    library = buildHigherOrderLibrary(noStateVars, libraryMaxDegree)
-    coordinate = sp.Function("q0")(TIME)
-    matrix, _elExpressions = buildEulerLagrangeMatrix(
-        library, coordinate, lagrangianOrder, noStateVars, derivativeColumns
-    )
+def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2, noFields=1):
+    derivativeData = [np.asarray(column, dtype=float).reshape(-1, noFields) for column in derivativeColumns]
+    library = multiFieldLibrary(noFields, lagrangianOrder, libraryMaxDegree)
+    matrix, _elExpressions = buildMultiFieldElMatrix(library, noFields, lagrangianOrder, derivativeData)
+
     keepMask = matrix.std(axis=0) > 1e-10
     keptLibrary = [monomial for monomial, keep in zip(library, keepMask) if keep]
     keptMatrix = matrix[:, keepMask]
 
-    kineticMonomial = sp.expand(stateVariableSymbols(noStateVars)[lagrangianOrder] ** 2)
-    if kineticMonomial not in keptLibrary:
+    grid = stateGridSymbols(noFields, lagrangianOrder)
+    kineticMonomials = [sp.expand(grid[field][lagrangianOrder] ** 2) for field in range(noFields)]
+    if any(monomial not in keptLibrary for monomial in kineticMonomials):
         return 1.0, False
-    kineticIndex = keptLibrary.index(kineticMonomial)
+    kineticIndices = [keptLibrary.index(monomial) for monomial in kineticMonomials]
 
-    kineticColumn = keptMatrix[:, kineticIndex]
-    design = np.delete(keptMatrix, kineticIndex, axis=1)
+    kineticColumn = keptMatrix[:, kineticIndices].sum(axis=1)
+    design = np.delete(keptMatrix, kineticIndices, axis=1)
     if design.shape[1] == 0:
         return 1.0, False
     coefficients, *_ = np.linalg.lstsq(design, -kineticColumn, rcond=None)
@@ -100,7 +94,9 @@ def _orderFitResidual(derivativeColumns, lagrangianOrder, libraryMaxDegree=2):
     return scaledResidual, degenerate
 
 
-def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, convergenceTolerance=None, stagnationTolerance=None):
+def inferLagrangianOrder(
+    derivativeColumns, maxOrder=3, libraryMaxDegree=2, convergenceTolerance=None, stagnationTolerance=None, noFields=1
+):
     convergenceTolerance = (
         checkResidualToleranceFromGram.__defaults__[0]
         if convergenceTolerance is None
@@ -116,7 +112,7 @@ def inferLagrangianOrder(derivativeColumns, maxOrder=3, libraryMaxDegree=2, conv
     for order in range(1, maxOrder + 1):
         if len(derivativeColumns) < 2 * order + 1:
             break
-        residual, degenerate = _orderFitResidual(derivativeColumns[: 2 * order + 1], order, libraryMaxDegree)
+        residual, degenerate = _orderFitResidual(derivativeColumns[: 2 * order + 1], order, libraryMaxDegree, noFields)
         converged = residual < convergenceTolerance
         perOrder.append({"order": order, "scaledResidual": residual, "converged": converged, "degenerate": degenerate})
         if converged:
@@ -183,7 +179,7 @@ def recoverHigherOrderLagrangian(
     kineticIndex = keptLibrary.index(kineticMonomial)
     keptMatrix, keptLibrary, kineticIndex = dropKineticAliasColumns(keptMatrix, keptLibrary, kineticIndex)
 
-    gramMatrix = keptMatrix.T @ keptMatrix
+    _n, _colSum, gramMatrix = accumulateGramFromChunks([keptMatrix], keptMatrix.shape[1])
     activeIndices, coefficients = forwardSelectFromGram(gramMatrix, kineticIndex)
 
     expression = kineticMonomial
@@ -193,6 +189,22 @@ def recoverHigherOrderLagrangian(
         expression = expression + snapCoefficient(float(coefficient), relativeTolerance=snapRelativeTolerance) * keptLibrary[index]
 
     return sp.expand(expression), selected
+
+
+def assembleDiscoveredHigherOrderLagrangian(
+    derivativeColumns,
+    noStateVars,
+    lagrangianOrder,
+    libraryMaxDegree=2,
+    snapRelativeTolerance=0.05,
+    kineticLevel=None,
+):
+    kineticLevel = min(2, lagrangianOrder) if kineticLevel is None else kineticLevel
+    _expression, selected = recoverHigherOrderLagrangian(
+        derivativeColumns, noStateVars, lagrangianOrder, libraryMaxDegree, snapRelativeTolerance, kineticLevel
+    )
+    kineticState = sp.expand(stateVariableSymbols(noStateVars)[kineticLevel] ** 2)
+    return assembleDiscoveredLagrangianFromState(kineticState, selected, snapRelativeTolerance)
 
 
 def recoverMultiFieldHigherOrderLagrangian(
@@ -226,7 +238,7 @@ def recoverMultiFieldHigherOrderLagrangian(
         augmented, augmentedLibrary, augmentedKineticIndex
     )
 
-    gramMatrix = augmented.T @ augmented
+    _n, _colSum, gramMatrix = accumulateGramFromChunks([augmented], augmented.shape[1])
     activeIndices, coefficients = forwardSelectFromGram(gramMatrix, augmentedKineticIndex)
 
     expression = sp.expand(sum(kineticMonomials))
@@ -236,3 +248,20 @@ def recoverMultiFieldHigherOrderLagrangian(
         expression += snapCoefficient(float(coefficient), relativeTolerance=snapRelativeTolerance) * augmentedLibrary[index]
 
     return sp.expand(expression), selected
+
+
+def assembleDiscoveredMultiFieldLagrangian(
+    derivativeData,
+    noFields,
+    lagrangianOrder,
+    libraryMaxDegree=2,
+    kineticLevel=None,
+    snapRelativeTolerance=0.05,
+):
+    kineticLevel = lagrangianOrder if kineticLevel is None else kineticLevel
+    _expression, selected = recoverMultiFieldHigherOrderLagrangian(
+        derivativeData, noFields, lagrangianOrder, libraryMaxDegree, kineticLevel, snapRelativeTolerance
+    )
+    grid = stateGridSymbols(noFields, lagrangianOrder)
+    kineticState = sp.expand(sum(grid[field][kineticLevel] ** 2 for field in range(noFields)))
+    return assembleDiscoveredLagrangianFromState(kineticState, selected, snapRelativeTolerance)
