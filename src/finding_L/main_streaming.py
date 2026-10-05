@@ -1,20 +1,18 @@
 from pathlib import Path
 
 import sympy as sp
-from finding_L.build_matrix import buildAdmissibleGram, buildGramMatrixChunked
-from finding_L.candidates import buildCandidateLibrary, filterPureVelocityTerms
+from finding_L.build_matrix import buildAdmissibleGram, buildGramMatrixChunked, columnVariance
+from finding_L.higher_order_candidates import buildCandidateLibrary, filterPureVelocityTerms
 from finding_L.gram_forward_select import (
     checkResidualToleranceFromGram,
-    fitActiveCoefficientsFromGram,
+    greedyRoundStep,
     pruneNearZeroCoefficients,
     residualNormSquaredFromGram,
-    scoreReserveCandidatesFromGram,
 )
 from finding_L.regularized_select import lassoSelect
 from finding_L.report import assembleDiscoveredLagrangian
 from finding_L.selection_logger import toSelectionLogFrame
 from finding_L.stopping_conditions import (
-    checkCorrelationCutoff,
     checkDegreeExpansionNeeded,
     checkResidualStagnation,
 )
@@ -24,8 +22,7 @@ DEFAULT_SELECTOR = "lasso"
 
 
 def zeroVarianceMask(G, colSum, n):
-    variance = G.diagonal() / n - (colSum / n) ** 2
-    return variance > 1e-12
+    return columnVariance(G, colSum, n) > 1e-12
 
 
 def admissibleReserve(candidateTerms, kineticTerm, G, colSum, n):
@@ -94,10 +91,8 @@ def runDiscoveryStreaming(
             print("Stopping: reserve exhausted.")
             break
 
-        coefficients = fitActiveCoefficientsFromGram(G, b, activeIndices)
-        residualNormSq = residualNormSquaredFromGram(targetNormSq, b, activeIndices, coefficients)
-
-        converged, scaledResidual = checkResidualToleranceFromGram(residualNormSq, targetNormSq, residualRmsTolerance)
+        step = greedyRoundStep(G, b, targetNormSq, activeIndices, reserveIndices, residualRmsTolerance, correlationCutoff)
+        coefficients, scaledResidual, converged = step["coefficients"], step["scaledResidual"], step["converged"]
 
         if roundCallback is not None:
             roundCallback(
@@ -123,12 +118,8 @@ def runDiscoveryStreaming(
             print("Stopping: residual no longer improving (Condition C).")
             break
 
-        bestLocalIndex, bestScore, _ = scoreReserveCandidatesFromGram(
-            G, b, activeIndices, reserveIndices, coefficients, residualNormSq
-        )
-        bestReserveIndex = reserveIndices[bestLocalIndex]
+        bestReserveIndex, bestScore, stalled = step["bestReserveIndex"], step["bestScore"], step["stalled"]
         selectionLog.append({"round": roundNumber, "bestReserveScore": bestScore, "scaledResidual": scaledResidual})
-        stalled, _ = checkCorrelationCutoff(bestScore, correlationCutoff)
 
         print(
             f"round {roundNumber}: candidate {candidateTerms[bestReserveIndex]}, "
