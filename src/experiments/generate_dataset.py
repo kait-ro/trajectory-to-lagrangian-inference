@@ -3,10 +3,11 @@ import os
 from pathlib import Path
 
 import numpy as np
-from experiments.systems import SYSTEMS
 from generation.eqnofmotion import defineCoordinates
 from generation.generate_data import generateDatasetStreaming
 from generation.integrator import GetAccelFunctions
+
+from experiments.systems import SYSTEMS
 
 ASSETS_DIR = str(Path(__file__).resolve().parents[2] / "assets")
 DEFAULT_SEED = 20260828
@@ -22,7 +23,7 @@ def generateSystemDatasets(systemName, noiseLevels=None, overwrite=False, seed=D
     requestedLevels = system.noiseLevels if noiseLevels is None else noiseLevels
 
     t, coords, vels = defineCoordinates(system.noCoords)
-    lagrangian, constants = system.buildLagrangian(coords, vels)
+    lagrangian, constants = system.buildLagrangian(coords)
     accelFunctions = GetAccelFunctions(lagrangian, coords, vels, t, constants)
 
     os.makedirs(ASSETS_DIR, exist_ok=True)

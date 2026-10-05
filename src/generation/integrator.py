@@ -1,25 +1,13 @@
 import numpy as np
 import sympy as sp
 
-from generation.eqnofmotion import (
-    ConvertSymbolsForNumpy,
-    EulerLagrangeEqn,
-    solveEulerLagrangeEqn,
-)
 from generation.higher_order_integrator import rk4Step
+from generation.ostrogradski import solveTopDerivatives
 
 
 def GetAccelFunctions(L: sp.Expr, coords: list, vels: list, t: sp.Symbol, constants: dict | None = None):
-    ELterms = EulerLagrangeEqn(L, coords, vels)
-    accelSolutions, _qddot = solveEulerLagrangeEqn(ELterms, coords, t)
-
-    if constants:
-        accelList = [expr.subs(constants) for expr in accelSolutions]
-    else:
-        accelList = list(accelSolutions)
-
-    accelFuncs = ConvertSymbolsForNumpy(accelList, coords, vels)
-    return accelFuncs
+    topSolution, _resolvedOrder, _equationOrder = solveTopDerivatives(L, coords, order=1, constants=constants)
+    return [sp.lambdify(coords + vels, expression, modules="numpy") for expression in topSolution]
 
 
 def simulateStep(state: np.ndarray, dt: float, accelFunctions: list):

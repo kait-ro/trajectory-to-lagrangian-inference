@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as sp
+
 from generation.eqnofmotion import TIME
 
 
@@ -21,6 +22,62 @@ def lagrangianOrder(lagrangian, coords):
 
 def timeDerivative(coordinate, k):
     return coordinate if k == 0 else sp.diff(coordinate, TIME, k)
+
+
+def isNullLagrangianLocal(deltaL, coords, order):
+    deltaL = sp.expand(sp.sympify(deltaL))
+    if deltaL == 0:
+        return True
+    for coordinate in coords:
+        residual = sp.expand(eulerLagrangeExpression(deltaL, coordinate, order, pipelineSign=True))
+        if residual != 0 and sp.simplify(residual) != 0:
+            return False
+    return True
+
+
+def _reduceSameFieldBilinearTerm(term, levels):
+    factors = sp.Mul.make_args(term)
+    levelDegrees = {}
+    otherFactors = []
+    for factor in factors:
+        base, exponent = factor.as_base_exp()
+        matchedIndex = None
+        for index, level in enumerate(levels):
+            if base == level:
+                matchedIndex = index
+                break
+        if matchedIndex is None:
+            otherFactors.append(factor)
+        else:
+            levelDegrees[matchedIndex] = levelDegrees.get(matchedIndex, 0) + exponent
+
+    involved = [(index, degree) for index, degree in levelDegrees.items() if degree != 0]
+    if len(involved) != 2 or involved[0][1] != 1 or involved[1][1] != 1:
+        return term
+
+    indexA, indexB = involved[0][0], involved[1][0]
+    rest = sp.Mul(*otherFactors) if otherFactors else sp.Integer(1)
+    gap = abs(indexA - indexB)
+    if gap % 2 == 1:
+        return sp.Integer(0)
+
+    steps = gap // 2
+    midIndex = (indexA + indexB) // 2
+    sign = sp.Integer(-1) ** steps
+    return sp.expand(rest * sign * levels[midIndex] ** 2)
+
+
+def _canonicalizeForCoordinate(lagrangian, coordinate, order):
+    levels = [timeDerivative(coordinate, k) for k in range(order + 1)]
+    terms = sp.Add.make_args(sp.expand(lagrangian))
+    return sp.expand(sp.Add(*[_reduceSameFieldBilinearTerm(term, levels) for term in terms]))
+
+
+def canonicalizeLagrangian(lagrangian, coords, order):
+    result = sp.expand(sp.sympify(lagrangian))
+    for coordinate in coords:
+        result = _canonicalizeForCoordinate(result, coordinate, order)
+    return sp.expand(result)
 
 
 def eulerLagrangeExpression(lagrangian, coordinate, order, pipelineSign=False):
@@ -62,7 +119,7 @@ def solveTopDerivatives(lagrangian, coords, order=None, constants=None):
 
 
 def buildStateDerivative(lagrangian, coords, order=None, constants=None):
-    topSolution, resolvedOrder, equationOrder = solveTopDerivatives(lagrangian, coords, order, constants)
+    topSolution, _resolvedOrder, equationOrder = solveTopDerivatives(lagrangian, coords, order, constants)
     noCoords = len(coords)
 
     lowerSubstitution = {}
