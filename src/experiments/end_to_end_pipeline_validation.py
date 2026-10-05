@@ -4,7 +4,7 @@ import os
 import numpy as np
 from experiments.artifacts import RESULTS_DIR
 from experiments.pu_system import groundTruthColumns
-from finding_L.pipeline import endToEndPipeline
+from finding_L.main import discoverLagrangian
 
 
 def run():
@@ -15,7 +15,7 @@ def run():
     for noiseLevel in [0.0, 0.001, 0.003, 0.01]:
         rng = np.random.default_rng(2029)
         noisy = cleanPosition + rng.normal(0.0, noiseLevel * cleanPosition.std(), cleanPosition.shape)
-        result = endToEndPipeline(noisy, dt, maxOrder=2)
+        result = discoverLagrangian(noisy, dt=dt, maxOrder=2)
         records.append(
             {
                 "noiseLevel": noiseLevel,
