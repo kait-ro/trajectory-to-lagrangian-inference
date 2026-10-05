@@ -3,7 +3,7 @@ from experiments.order_inference_validation import (
     _anharmonicOscillatorColumns,
     _harmonicOscillatorColumns,
 )
-from experiments.pu_system import groundTruthColumns
+from experiments.pu_system import groundTruthColumns, multiFieldGroundTruthColumns
 from finding_L.higher_order_discovery import inferLagrangianOrder, reduceOrderToPrior
 
 
@@ -35,6 +35,27 @@ def test_linear_harmonic_oscillator_is_order_one_but_flagged_degenerate():
 def test_degenerate_inference_does_not_reduce_an_order_prior():
     columns = _harmonicOscillatorColumns(steps=7000, noTrajectories=6)
     assert reduceOrderToPrior(columns, lagrangianOrder=3, libraryMaxDegree=2) == 3
+
+
+def test_two_field_coupled_pais_uhlenbeck_is_inferred_as_order_two():
+    _dt, columns = multiFieldGroundTruthColumns(2, 4, coupling=0.3, dt=0.004, steps=12000)
+    order, perOrder = inferLagrangianOrder(
+        [np.asarray(c, dtype=float) for c in columns], maxOrder=3, noFields=2
+    )
+    assert order == 2
+    assert perOrder[0]["scaledResidual"] > 0.1
+    assert perOrder[1]["converged"]
+    assert not perOrder[1]["degenerate"]
+
+
+def test_single_field_order_inference_unchanged_by_default_noFields():
+    _dt, _position, columns = groundTruthColumns(6, dt=0.004, steps=12000)
+    orderDefault, perOrderDefault = inferLagrangianOrder([np.asarray(c, dtype=float) for c in columns], maxOrder=3)
+    orderExplicit, perOrderExplicit = inferLagrangianOrder(
+        [np.asarray(c, dtype=float) for c in columns], maxOrder=3, noFields=1
+    )
+    assert orderDefault == orderExplicit == 2
+    assert perOrderDefault == perOrderExplicit
 
 
 def test_not_enough_derivative_levels_raises():
