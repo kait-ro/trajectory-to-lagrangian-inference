@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 
+from finding_L.stopping_conditions import checkCorrelationCutoff
+
 
 def fitActiveCoefficientsFromGram(G: np.ndarray, b: np.ndarray, activeIndices: list) -> np.ndarray:
     if not activeIndices:
@@ -50,6 +52,45 @@ def scoreReserveCandidatesFromGram(
     bestLocalIndex = int(np.argmax(np.abs(scores)))
     bestScore = scores[bestLocalIndex]
     return bestLocalIndex, bestScore, scores
+
+
+def greedyRoundStep(
+    G: np.ndarray,
+    b: np.ndarray,
+    targetNormSq: float,
+    activeIndices: list,
+    reserveIndices: list,
+    residualRmsTolerance: float,
+    correlationCutoff: float,
+):
+    coefficients = fitActiveCoefficientsFromGram(G, b, activeIndices)
+    residualNormSq = residualNormSquaredFromGram(targetNormSq, b, activeIndices, coefficients)
+    converged, scaledResidual = checkResidualToleranceFromGram(residualNormSq, targetNormSq, residualRmsTolerance)
+
+    if converged:
+        return {
+            "coefficients": coefficients,
+            "scaledResidual": scaledResidual,
+            "converged": True,
+            "stalled": False,
+            "bestReserveIndex": None,
+            "bestScore": None,
+        }
+
+    bestLocalIndex, bestScore, _ = scoreReserveCandidatesFromGram(
+        G, b, activeIndices, reserveIndices, coefficients, residualNormSq
+    )
+    bestReserveIndex = reserveIndices[bestLocalIndex]
+    stalled, _ = checkCorrelationCutoff(bestScore, correlationCutoff)
+
+    return {
+        "coefficients": coefficients,
+        "scaledResidual": scaledResidual,
+        "converged": False,
+        "stalled": stalled,
+        "bestReserveIndex": bestReserveIndex,
+        "bestScore": bestScore,
+    }
 
 
 def pruneNearZeroCoefficients(
