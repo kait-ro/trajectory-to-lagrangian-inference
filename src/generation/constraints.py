@@ -5,13 +5,17 @@ from sympy.polys.polyerrors import CoercionFailed
 
 
 def _groebnerRemainder(expression, constraintExpressions, variables):
-    polys = [sp.expand(c) for c in constraintExpressions]
+    constraintPolynomials = [sp.expand(constraint) for constraint in constraintExpressions]
     try:
-        basis = sp.groebner(polys, *variables, order="lex")
-        return sp.expand(basis.reduce(expression)[1])
+        groebnerBasis = sp.groebner(constraintPolynomials, *variables, order="lex")
+        return sp.expand(groebnerBasis.reduce(expression)[1])
     except CoercionFailed:
-        basis = sp.groebner(polys, *variables, order="lex", domain="QQ")
-        return sp.expand(basis.reduce(expression)[1])
+        # sympy picks the coefficient domain from the inputs and that guess fails
+        # on mixed rational coefficients; force the rational field and retry.
+        groebnerBasis = sp.groebner(
+            constraintPolynomials, *variables, order="lex", domain="QQ"
+        )
+        return sp.expand(groebnerBasis.reduce(expression)[1])
 
 
 @dataclass
@@ -56,13 +60,17 @@ class DegenerateLagrangianResult:
         constraints = self.allConstraints or self.primaryConstraints
         classes = self.allConstraintClasses or self.constraintClass
         generations = self.constraintGenerations or [1] * len(constraints)
-        for constraint, klass, generation in zip(constraints, classes, generations):
+        for constraint, constraintClassLabel, generation in zip(constraints, classes, generations):
             lines.append(
-                f"  gen {generation}  {klass:>28}:  {constraint.expression} = 0   ({constraint.origin})"
+                f"  gen {generation}  {constraintClassLabel:>28}:  {constraint.expression} = 0   ({constraint.origin})"
             )
-        matrix = self.fullPoissonBracketMatrix if self.fullPoissonBracketMatrix is not None else self.poissonBracketMatrix
+        bracketMatrix = (
+            self.fullPoissonBracketMatrix
+            if self.fullPoissonBracketMatrix is not None
+            else self.poissonBracketMatrix
+        )
         lines.append("  Poisson-bracket matrix C_ab = {phi_a, phi_b}:")
-        lines.append(f"    {matrix.tolist()}")
+        lines.append(f"    {bracketMatrix.tolist()}")
         lines.append(f"  canonical H (primary surface) = {self.canonicalHamiltonian}")
         if self.chainClosed:
             lines.append("  Dirac-Bergmann chain closed.")
@@ -79,18 +87,23 @@ class DegenerateLagrangianResult:
         return "\n".join(lines)
 
 
-def poissonBracket(f, g, positions, momenta):
+def poissonBracket(leftObservable, rightObservable, positions, momenta):
     if len(positions) != len(momenta):
         raise ValueError("positions and momenta must pair up one-to-one")
-    f = sp.sympify(f)
-    g = sp.sympify(g)
-    total = sp.Integer(0)
-    for q, p in zip(positions, momenta):
-        total += sp.diff(f, q) * sp.diff(g, p) - sp.diff(f, p) * sp.diff(g, q)
-    return sp.expand(total)
+    leftObservable = sp.sympify(leftObservable)
+    rightObservable = sp.sympify(rightObservable)
+    bracketSum = sp.Integer(0)
+    for position, momentum in zip(positions, momenta):
+        bracketSum += (
+            sp.diff(leftObservable, position) * sp.diff(rightObservable, momentum)
+            - sp.diff(leftObservable, momentum) * sp.diff(rightObservable, position)
+        )
+    return sp.expand(bracketSum)
 
 
 def weaklyVanishes(expression, constraintExpressions, variables):
+    # "Weakly" means zero on the constraint surface (modulo the ideal the
+    # constraints generate), not necessarily zero as a free expression.
     expression = sp.expand(sp.sympify(expression))
     if expression == 0:
         return True
@@ -100,6 +113,9 @@ def weaklyVanishes(expression, constraintExpressions, variables):
     try:
         return _groebnerRemainder(expression, constraintExpressions, variables) == 0
     except (sp.PolynomialError, sp.GeneratorsError, TypeError, CoercionFailed):
+        # The constraints do not form an ideal Groebner reduction can handle here,
+        # so fall back to solving each one for a single variable and substituting
+        # it away, taking the constraints in turn.
         substituted = expression
         for constraint in constraintExpressions:
             for variable in variables:
@@ -120,6 +136,9 @@ def reduceModulo(expression, constraintExpressions, variables):
 
 
 def _independentOfExisting(candidate, existingExpressions, variables):
+    # A newly derived relation is only a genuinely new constraint if the current
+    # set does not already imply it: it must neither reduce to zero modulo them
+    # nor be a constant multiple of one of them.
     candidate = sp.expand(candidate)
     if candidate == 0:
         return False
@@ -135,48 +154,93 @@ def _independentOfExisting(candidate, existingExpressions, variables):
     return True
 
 
+def _fixesAMultiplier(
+    constraintExpression, allConstraintExpressions, primaryCount, positions, momenta, variables
+):
+    # If {phi_a, phi_primary} fails to vanish weakly for some primary constraint,
+    # the time-consistency equation for phi_a pins down a Lagrange multiplier
+    # rather than yielding a fresh constraint.
+    return any(
+        not weaklyVanishes(
+            poissonBracket(
+                constraintExpression,
+                allConstraintExpressions[primaryIndex],
+                positions,
+                momenta,
+            ),
+            allConstraintExpressions,
+            variables,
+        )
+        for primaryIndex in range(primaryCount)
+    )
+
+
+def _nextGenerationConstraints(
+    frontierIndices, allConstraints, hamiltonian, primaryCount, positions, momenta, variables
+):
+    constraintExpressions = [constraint.expression for constraint in allConstraints]
+    newConstraintExpressions = []
+    for constraintIndex in frontierIndices:
+        if _fixesAMultiplier(
+            constraintExpressions[constraintIndex],
+            constraintExpressions,
+            primaryCount,
+            positions,
+            momenta,
+            variables,
+        ):
+            continue
+        # Time-consistency: {phi_a, H} must also vanish on the constraint surface.
+        consistency = poissonBracket(
+            constraintExpressions[constraintIndex], hamiltonian, positions, momenta
+        )
+        reduced = reduceModulo(consistency, constraintExpressions, variables)
+        if _independentOfExisting(
+            reduced, constraintExpressions + newConstraintExpressions, variables
+        ):
+            newConstraintExpressions.append(sp.expand(reduced))
+    return newConstraintExpressions
+
+
 def diracBergmannIteration(primaryConstraints, hamiltonian, positions, momenta, maxRounds=8):
     variables = list(positions) + list(momenta)
     allConstraints = list(primaryConstraints)
     generations = [1] * len(primaryConstraints)
     primaryCount = len(primaryConstraints)
-    frontier = list(range(primaryCount))
+    # The frontier holds only the newest generation of constraints whose
+    # time-consistency has not been checked yet.
+    frontierIndices = list(range(primaryCount))
     chainClosed = primaryCount == 0
 
     for roundIndex in range(1, maxRounds + 1):
-        if not frontier:
+        if not frontierIndices:
             chainClosed = True
             break
-        expressions = [c.expression for c in allConstraints]
-        pending = []
-        for a in frontier:
-            determinesMultiplier = any(
-                not weaklyVanishes(
-                    poissonBracket(expressions[a], expressions[p], positions, momenta),
-                    expressions,
-                    variables,
-                )
-                for p in range(primaryCount)
-            )
-            if determinesMultiplier:
-                continue
-            consistency = poissonBracket(expressions[a], hamiltonian, positions, momenta)
-            reduced = reduceModulo(consistency, expressions, variables)
-            if _independentOfExisting(reduced, expressions + pending, variables):
-                pending.append(sp.expand(reduced))
-        if not pending:
+        newConstraintExpressions = _nextGenerationConstraints(
+            frontierIndices,
+            allConstraints,
+            hamiltonian,
+            primaryCount,
+            positions,
+            momenta,
+            variables,
+        )
+        if not newConstraintExpressions:
             chainClosed = True
             break
-        firstNew = len(allConstraints)
-        for expression in pending:
+        firstNewConstraintIndex = len(allConstraints)
+        # Primaries are generation 1, so constraints found in round `roundIndex`
+        # form generation `roundIndex + 1`.
+        nextGeneration = roundIndex + 1
+        for expression in newConstraintExpressions:
             allConstraints.append(
                 PrimaryConstraint(
                     expression,
-                    origin=f"Dirac-Bergmann consistency (generation {roundIndex + 1})",
+                    origin=f"Dirac-Bergmann consistency (generation {nextGeneration})",
                 )
             )
-        generations.extend([roundIndex + 1] * len(pending))
-        frontier = list(range(firstNew, len(allConstraints)))
+        generations.extend([nextGeneration] * len(newConstraintExpressions))
+        frontierIndices = list(range(firstNewConstraintIndex, len(allConstraints)))
 
     classes, bracket, firstCount, secondCount, secondaryExpected = classifyConstraints(
         allConstraints, hamiltonian, positions, momenta
@@ -194,62 +258,97 @@ def diracBergmannIteration(primaryConstraints, hamiltonian, positions, momenta, 
 
 
 def diracBracketMatrix(secondClassExpressions, positions, momenta):
-    n = len(secondClassExpressions)
+    count = len(secondClassExpressions)
     return sp.Matrix(
-        n,
-        n,
-        lambda a, b: poissonBracket(
-            secondClassExpressions[a], secondClassExpressions[b], positions, momenta
+        count,
+        count,
+        lambda rowIndex, columnIndex: poissonBracket(
+            secondClassExpressions[rowIndex],
+            secondClassExpressions[columnIndex],
+            positions,
+            momenta,
         ),
     )
 
 
-def diracBracket(f, g, secondClassExpressions, positions, momenta):
-    canonical = poissonBracket(f, g, positions, momenta)
+def diracBracket(leftObservable, rightObservable, secondClassExpressions, positions, momenta):
+    canonical = poissonBracket(leftObservable, rightObservable, positions, momenta)
     if not secondClassExpressions:
         return canonical
-    matrix = diracBracketMatrix(secondClassExpressions, positions, momenta)
-    if matrix.det() == 0:
+    secondClassBracketMatrix = diracBracketMatrix(secondClassExpressions, positions, momenta)
+    if secondClassBracketMatrix.det() == 0:
         raise ValueError("second-class constraint matrix is singular; Dirac bracket undefined")
-    inverse = matrix.inv()
-    n = len(secondClassExpressions)
-    correction = sp.Integer(0)
-    for a in range(n):
-        left = poissonBracket(f, secondClassExpressions[a], positions, momenta)
-        if left == 0:
+    inverseBracketMatrix = secondClassBracketMatrix.inv()
+    secondClassCount = len(secondClassExpressions)
+    # The correction subtracts the second-class directions so those constraints
+    # can be imposed strongly: {f, g}* = {f, g} - {f, phi_a} (C^-1)_ab {phi_b, g},
+    # with C the second-class Poisson-bracket matrix.
+    diracCorrection = sp.Integer(0)
+    for rowIndex in range(secondClassCount):
+        bracketWithLeft = poissonBracket(
+            leftObservable, secondClassExpressions[rowIndex], positions, momenta
+        )
+        if bracketWithLeft == 0:
             continue
-        for b in range(n):
-            right = poissonBracket(secondClassExpressions[b], g, positions, momenta)
-            if right == 0:
+        for columnIndex in range(secondClassCount):
+            bracketWithRight = poissonBracket(
+                secondClassExpressions[columnIndex], rightObservable, positions, momenta
+            )
+            if bracketWithRight == 0:
                 continue
-            correction += left * inverse[a, b] * right
-    return sp.expand(canonical - correction)
+            diracCorrection += (
+                bracketWithLeft
+                * inverseBracketMatrix[rowIndex, columnIndex]
+                * bracketWithRight
+            )
+    return sp.expand(canonical - diracCorrection)
+
+
+def _poissonBracketMatrix(constraintExpressions, positions, momenta):
+    constraintCount = len(constraintExpressions)
+    bracket = sp.zeros(constraintCount, constraintCount)
+    for rowIndex in range(constraintCount):
+        for columnIndex in range(constraintCount):
+            bracket[rowIndex, columnIndex] = poissonBracket(
+                constraintExpressions[rowIndex],
+                constraintExpressions[columnIndex],
+                positions,
+                momenta,
+            )
+    return bracket
+
+
+def _rowVanishesWeakly(bracketMatrix, rowIndex, constraintExpressions, variables):
+    return all(
+        weaklyVanishes(bracketMatrix[rowIndex, columnIndex], constraintExpressions, variables)
+        for columnIndex in range(len(constraintExpressions))
+    )
 
 
 def classifyConstraints(constraints, hamiltonian, positions, momenta):
-    expressions = [c.expression for c in constraints]
+    constraintExpressions = [constraint.expression for constraint in constraints]
     variables = list(positions) + list(momenta)
-    n = len(constraints)
+    constraintCount = len(constraints)
 
-    bracket = sp.zeros(n, n)
-    for a in range(n):
-        for b in range(n):
-            bracket[a, b] = poissonBracket(expressions[a], expressions[b], positions, momenta)
+    bracket = _poissonBracketMatrix(constraintExpressions, positions, momenta)
 
     classes = []
     secondaryExpected = False
     firstClassCount = 0
     secondClassCount = 0
-    for a in range(n):
-        rowWeaklyZero = all(
-            weaklyVanishes(bracket[a, b], expressions, variables) for b in range(n)
-        )
-        if not rowWeaklyZero:
+    for rowIndex in range(constraintCount):
+        # First-class: the Poisson bracket with every constraint vanishes on the
+        # constraint surface. Any surviving bracket makes it second-class.
+        if not _rowVanishesWeakly(bracket, rowIndex, constraintExpressions, variables):
             classes.append("second-class")
             secondClassCount += 1
             continue
-        consistency = poissonBracket(expressions[a], hamiltonian, positions, momenta)
-        if weaklyVanishes(consistency, expressions, variables):
+        # A first-class constraint whose {phi, H} does not weakly vanish means a
+        # secondary constraint is still pending further down the chain.
+        consistency = poissonBracket(
+            constraintExpressions[rowIndex], hamiltonian, positions, momenta
+        )
+        if weaklyVanishes(consistency, constraintExpressions, variables):
             classes.append("first-class")
         else:
             classes.append("first-class (pending secondary)")
