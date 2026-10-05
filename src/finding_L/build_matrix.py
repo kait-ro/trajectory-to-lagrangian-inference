@@ -1,13 +1,16 @@
 import numpy as np
 import pandas as pd
 import sympy as sp
-from generation.eqnofmotion import TIME, EulerLagrangeEqn
+from generation.eqnofmotion import TIME
+from generation.ostrogradski import eulerLagrangeExpression
 
 GRAM_DENSE_CELL_BUDGET = 48_000_000
 
 
 def computeCandidateElColumns(candidateTerm: sp.Expr, coords: list, vels: list, t: sp.Symbol = TIME):
-    elExpressions = EulerLagrangeEqn(candidateTerm, coords, vels)
+    elExpressions = [
+        eulerLagrangeExpression(candidateTerm, coordinate, 1, pipelineSign=True) for coordinate in coords
+    ]
 
     qddotSymbols = [sp.symbols(f"q{i}ddot") for i in range(len(coords))]
     substitutedExpressions = []
@@ -57,6 +60,28 @@ def denseBlockRowLimit(noCandidates: int, noCoords: int, cellBudget: int = GRAM_
     return max(1, min(200_000, cellBudget // cellsPerRow))
 
 
+def columnVariance(G: np.ndarray, colSum: np.ndarray, n: int) -> np.ndarray:
+    return G.diagonal() / n - (colSum / n) ** 2
+
+
+def accumulateGramFromChunks(thetaChunks, noCandidates: int):
+    n = 0
+    colSum = np.zeros(noCandidates)
+    G = np.zeros((noCandidates, noCandidates))
+    for thetaChunk in thetaChunks:
+        n += thetaChunk.shape[0]
+        colSum += thetaChunk.sum(axis=0)
+        G += thetaChunk.T @ thetaChunk
+    return n, colSum, G
+
+
+def csvThetaChunks(csvPath: str, lambdifiedFuncsPerTerm: list, noCoords: int, chunkRows: int, rowLimit: int):
+    for chunk in pd.read_csv(csvPath, chunksize=chunkRows):
+        for start in range(0, len(chunk), rowLimit):
+            subChunk = chunk.iloc[start:start + rowLimit]
+            yield evaluateChunkColumns(lambdifiedFuncsPerTerm, subChunk, noCoords)
+
+
 def buildGramMatrixChunked(
     candidateTerms: list,
     coords: list,
@@ -70,21 +95,9 @@ def buildGramMatrixChunked(
 ):
     noCandidates = len(candidateTerms)
     lambdifiedFuncsPerTerm = lambdifiedColumnsForTerms(candidateTerms, coords, vels, t, lambdifiedCache)
-
-    n = 0
-    colSum = np.zeros(noCandidates)
-    G = np.zeros((noCandidates, noCandidates))
-
     rowLimit = denseBlockRowLimit(noCandidates, noCoords, cellBudget)
-    for chunk in pd.read_csv(csvPath, chunksize=chunkRows):
-        for start in range(0, len(chunk), rowLimit):
-            subChunk = chunk.iloc[start:start + rowLimit]
-            thetaChunk = evaluateChunkColumns(lambdifiedFuncsPerTerm, subChunk, noCoords)
-
-            n += thetaChunk.shape[0]
-            colSum += thetaChunk.sum(axis=0)
-            G += thetaChunk.T @ thetaChunk
-    return n, colSum, G
+    thetaChunks = csvThetaChunks(csvPath, lambdifiedFuncsPerTerm, noCoords, chunkRows, rowLimit)
+    return accumulateGramFromChunks(thetaChunks, noCandidates)
 
 
 def buildAdmissibleGram(
@@ -103,7 +116,7 @@ def buildAdmissibleGram(
         candidateTerms, coords, vels, t, csvPath, noCoords, chunkRows, lambdifiedCache=lambdifiedCache
     )
     kineticIndex = candidateTerms.index(kineticTerm)
-    variance = G.diagonal() / n - (colSum / n) ** 2
+    variance = columnVariance(G, colSum, n)
     admissible = [
         index for index in range(len(candidateTerms))
         if variance[index] > varianceFloor or index == kineticIndex
